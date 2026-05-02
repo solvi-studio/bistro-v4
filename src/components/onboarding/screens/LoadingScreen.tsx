@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { gsap } from "gsap";
 import MascotAvatar from "../MascotAvatar";
@@ -19,15 +19,14 @@ interface LoadingScreenProps {
 
 export default function LoadingScreen({ onDone, avatarSrc }: LoadingScreenProps) {
   const barRef = useRef<HTMLDivElement>(null);
-  const [phaseIdx, setPhaseIdx] = useEffectState(0);
+  const [phaseIdx, setPhaseIdx] = useState(0);
   const phase = LOADING_PHASES[phaseIdx];
 
   useEffect(() => {
     if (!barRef.current) return;
 
-    const targetPct = `${phase.pct}%`;
     const tween = gsap.to(barRef.current, {
-      width: targetPct,
+      width: `${phase.pct}%`,
       duration: 0.5,
       ease: "power2.out",
       onComplete: () => {
@@ -44,7 +43,7 @@ export default function LoadingScreen({ onDone, avatarSrc }: LoadingScreenProps)
     return () => {
       tween.kill();
     };
-  }, [onDone, phase.pct, phaseIdx, setPhaseIdx]);
+  }, [onDone, phase.pct, phaseIdx]);
 
   return (
     <motion.div
@@ -74,29 +73,4 @@ export default function LoadingScreen({ onDone, avatarSrc }: LoadingScreenProps)
       </div>
     </motion.div>
   );
-}
-
-// Helper hook for useEffect with state setter that works in render
-function useEffectState<T>(initial: T): [T, React.Dispatch<React.SetStateAction<T>>] {
-  const [state, setState] = useState(initial);
-  return [state, setState];
-}
-
-function useState<T>(initial: T): [T, React.Dispatch<React.SetStateAction<T>>] {
-  const ref = useRef<T>(initial);
-  const [, forceUpdate] = useStateReducer((x) => x + 1, 0);
-
-  return [
-    ref.current,
-    (newVal: T | ((prev: T) => T)) => {
-      ref.current = typeof newVal === "function" ? (newVal as (prev: T) => T)(ref.current) : newVal;
-      forceUpdate((x) => x + 1);
-    },
-  ];
-}
-
-function useStateReducer<T>(reducer: (x: T) => T, initial: T): [T, React.Dispatch<() => void>] {
-  const [state, setState] = React.useState(initial);
-  const dispatch = () => setState(reducer);
-  return [state, dispatch];
 }

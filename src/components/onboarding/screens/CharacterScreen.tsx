@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { useOnboardingStore } from "@/store/onboardingStore";
+import { useOnboardingStore, selectCanAdvance } from "@/store/onboardingStore";
 import Blob from "../Blob";
 
 const CHARACTERS = [
@@ -14,7 +14,8 @@ const CHARACTERS = [
 ];
 
 export default function CharacterScreen({ onNext }: { onNext: () => void }) {
-  const { character, setCharacter, canAdvance } = useOnboardingStore();
+  const { character, setCharacter } = useOnboardingStore();
+  const canAdvance = useOnboardingStore(selectCanAdvance);
 
   return (
     <>

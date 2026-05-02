@@ -2,9 +2,11 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { getInitialOnboardingData, saveOnboardingData, ONBOARDING_DATA_KEY, ONBOARDING_DONE_KEY } from "@/utils/onboarding";
+import { getInitialOnboardingData } from "@/utils/onboarding";
 
 export type Screen = "name" | "content" | "character" | "pain" | "loading" | "summary";
+
+export const CHARACTERS = ["chef", "scholar", "explorer", "creator", "traveler"] as const;
 
 interface OnboardingState {
   // Form data
@@ -25,6 +27,7 @@ interface OnboardingState {
   setName: (name: string) => void;
   addContentType: (type: string) => void;
   removeContentType: (type: string) => void;
+  setContentTypes: (types: string[]) => void;
   setCharacter: (index: number | null) => void;
   setPainPoints: (points: string) => void;
 
@@ -37,18 +40,38 @@ interface OnboardingState {
   // Actions - UI
   setOthersExpanded: (expanded: boolean) => void;
   setOthersText: (text: string) => void;
-
-  // Derived state
-  canAdvance: boolean;
-  canRetreat: boolean;
 }
 
 const SCREEN_ORDER: Screen[] = ["name", "content", "character", "pain", "loading", "summary"];
 
+// Selector functions for derived state.
+// Note: getter properties in zustand state don't survive Object.assign merges in `set`,
+// so derived values must live outside the store as selectors.
+export const selectCanAdvance = (state: OnboardingState): boolean => {
+  switch (state.currentScreen) {
+    case "name":
+      return state.name.trim().length > 0;
+    case "content":
+      return state.contentTypes.length > 0;
+    case "character":
+      return state.character !== null;
+    case "pain":
+      return state.painPoints.trim().length > 0;
+    case "loading":
+      return false;
+    case "summary":
+      return true;
+    default:
+      return false;
+  }
+};
+
+export const selectCanRetreat = (state: OnboardingState): boolean =>
+  state.currentScreen !== "name" && state.currentScreen !== "loading";
+
 export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set, get) => {
-      // Initialize from existing localStorage data
       const initialData = getInitialOnboardingData();
 
       return {
@@ -63,30 +86,14 @@ export const useOnboardingStore = create<OnboardingState>()(
         othersText: "",
 
         // Form data actions
-        setName: (name) => {
-          set({ name });
-          get().syncToLocalStorage();
-        },
-
-        addContentType: (type) => {
-          set((state) => ({ contentTypes: [...state.contentTypes, type] }));
-          get().syncToLocalStorage();
-        },
-
-        removeContentType: (type) => {
-          set((state) => ({ contentTypes: state.contentTypes.filter((t) => t !== type) }));
-          get().syncToLocalStorage();
-        },
-
-        setCharacter: (index) => {
-          set({ character: index });
-          get().syncToLocalStorage();
-        },
-
-        setPainPoints: (points) => {
-          set({ painPoints: points });
-          get().syncToLocalStorage();
-        },
+        setName: (name) => set({ name }),
+        addContentType: (type) =>
+          set((state) => ({ contentTypes: [...state.contentTypes, type] })),
+        removeContentType: (type) =>
+          set((state) => ({ contentTypes: state.contentTypes.filter((t) => t !== type) })),
+        setContentTypes: (types) => set({ contentTypes: types }),
+        setCharacter: (index) => set({ character: index }),
+        setPainPoints: (points) => set({ painPoints: points }),
 
         // Navigation actions
         advance: () => {
@@ -105,63 +112,12 @@ export const useOnboardingStore = create<OnboardingState>()(
           }
         },
 
-        setScreen: (screen) => {
-          set({ currentScreen: screen });
-        },
-
-        markComplete: () => {
-          set({ isComplete: true });
-        },
+        setScreen: (screen) => set({ currentScreen: screen }),
+        markComplete: () => set({ isComplete: true }),
 
         // UI actions
-        setOthersExpanded: (expanded) => {
-          set({ othersExpanded: expanded });
-        },
-
-        setOthersText: (text) => {
-          set({ othersText: text });
-        },
-
-        // Derived state
-        get canAdvance() {
-          const { currentScreen, name, contentTypes, character, painPoints } = get();
-          switch (currentScreen) {
-            case "name":
-              return name.trim().length > 0;
-            case "content":
-              return contentTypes.length > 0;
-            case "character":
-              return character !== null;
-            case "pain":
-              return painPoints.trim().length > 0;
-            case "loading":
-              return false;
-            case "summary":
-              return true;
-            default:
-              return false;
-          }
-        },
-
-        get canRetreat() {
-          const { currentScreen } = get();
-          return currentScreen !== "name" && currentScreen !== "loading";
-        },
-
-        // Sync current state to legacy localStorage format
-        syncToLocalStorage: () => {
-          const { name, contentTypes, character, painPoints } = get();
-          const characterRef = character !== null
-            ? ["chef", "scholar", "explorer", "creator", "traveler"][character]
-            : undefined;
-
-          saveOnboardingData({
-            name,
-            dataLane: contentTypes,
-            challenge: painPoints,
-            character: characterRef,
-          });
-        },
+        setOthersExpanded: (expanded) => set({ othersExpanded: expanded }),
+        setOthersText: (text) => set({ othersText: text }),
       };
     },
     {

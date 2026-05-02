@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useOnboardingStore } from "@/store/onboardingStore";
+import { useOnboardingStore, selectCanAdvance } from "@/store/onboardingStore";
 import MascotAvatar from "../MascotAvatar";
 import Blob from "../Blob";
 
@@ -12,7 +12,8 @@ const LANE_EMOJIS: Record<string, string> = {
 };
 
 export default function ContentScreen({ onNext }: { onNext: () => void }) {
-  const { name, contentTypes, addContentType, removeContentType, canAdvance, othersExpanded, setOthersExpanded, othersText, setOthersText } = useOnboardingStore();
+  const { name, contentTypes, addContentType, removeContentType, setContentTypes, othersExpanded, setOthersExpanded, othersText, setOthersText } = useOnboardingStore();
+  const canAdvance = useOnboardingStore(selectCanAdvance);
 
   const toggleContentType = (opt: string) => {
     if (contentTypes.includes(opt)) {
@@ -24,22 +25,12 @@ export default function ContentScreen({ onNext }: { onNext: () => void }) {
 
   const handleOthersChange = (value: string) => {
     setOthersText(value);
-    // Clear any existing "Others" entries and add new ones
-    const withoutOthers = contentTypes.filter((t) => !t.startsWith("Others:"));
-    const parts = value
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    // Remove individual "Others" entries and rebuild from text
-    const newTypes = withoutOthers.filter((t) => t !== "Others");
-    if (parts.length > 0) {
-      parts.forEach((p) => {
-        if (!newTypes.includes(`Others: ${p}`)) {
-          newTypes.push(`Others: ${p}`);
-        }
-      });
-    }
+    const withoutOthers = contentTypes.filter((t) => !t.startsWith("Others:") && t !== "Others");
+    const parts = value.split(",").map((s) => s.trim()).filter(Boolean);
+    const newTypes = parts.length > 0
+      ? [...withoutOthers, ...parts.map((p) => `Others: ${p}`)]
+      : withoutOthers;
+    setContentTypes(newTypes);
   };
 
   return (

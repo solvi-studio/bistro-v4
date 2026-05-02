@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useOnboardingStore } from "@/store/onboardingStore";
+import { useOnboardingStore, selectCanAdvance } from "@/store/onboardingStore";
 import MascotAvatar from "../MascotAvatar";
 import Blob from "../Blob";
 
@@ -12,8 +12,9 @@ const CHIP_EMOJIS: Record<string, string> = {
   "content management": "📊",
 };
 
-export default function PainScreen({ onNext }: { onNext: () => void }) {
-  const { painPoints, setPainPoints, canAdvance } = useOnboardingStore();
+export default function PainScreen({ onNext, avatarSrc }: { onNext: () => void; avatarSrc?: string }) {
+  const { painPoints, setPainPoints } = useOnboardingStore();
+  const canAdvance = useOnboardingStore(selectCanAdvance);
 
   const toggleChip = (chip: string) => {
     const parts = painPoints
@@ -40,7 +41,7 @@ export default function PainScreen({ onNext }: { onNext: () => void }) {
         <Blob color="#fca5a5" className="w-55 h-55 -top-8 -left-12" />
         <Blob color="#86efac" className="w-50 h-50 -bottom-8 -right-8" />
         <div className="relative">
-          <MascotAvatar size={130} />
+          <MascotAvatar size={130} src={avatarSrc} />
           <p className="mb-2 text-center text-[26px] leading-[1.45] font-semibold text-[#1a1a1a]">
             Got it!
           </p>

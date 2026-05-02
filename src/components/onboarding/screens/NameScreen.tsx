@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useOnboardingStore } from "@/store/onboardingStore";
+import { useOnboardingStore, selectCanAdvance } from "@/store/onboardingStore";
 import MascotAvatar from "../MascotAvatar";
 import Blob from "../Blob";
 
@@ -10,7 +10,8 @@ interface NameScreenProps {
 }
 
 export default function NameScreen({ onNext }: NameScreenProps) {
-  const { name, setName, canAdvance } = useOnboardingStore();
+  const { name, setName } = useOnboardingStore();
+  const canAdvance = useOnboardingStore(selectCanAdvance);
 
   return (
     <>
