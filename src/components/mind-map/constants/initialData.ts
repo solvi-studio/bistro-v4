@@ -1,4 +1,5 @@
 import type { Node, Edge } from "@xyflow/react";
+import { EDGE_MARKER } from "@/components/mind-map/edges/edgeTypes";
 
 export const INITIAL_NODES: Node[] = [
   {
@@ -53,14 +54,16 @@ export const INITIAL_EDGES: Edge[] = [
     id: "e1-2",
     source: "demo-1",
     target: "demo-2",
-    type: "smoothstep",
-    style: { stroke: "#d1d5db", strokeWidth: 1.5 },
+    type: "labeled",
+    data: { arrowEnd: true },
+    markerEnd: EDGE_MARKER,
   },
   {
     id: "e1-3",
     source: "demo-1",
     target: "demo-3",
-    type: "smoothstep",
-    style: { stroke: "#d1d5db", strokeWidth: 1.5 },
+    type: "labeled",
+    data: { arrowEnd: true },
+    markerEnd: EDGE_MARKER,
   },
 ];

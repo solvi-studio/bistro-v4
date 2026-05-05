@@ -198,6 +198,7 @@ export function useKeyboardShortcuts(deps: ShortcutDeps) {
     reg("v", () => setActiveTool("select"));
     reg("s", () => setActiveTool("sticky"));
     reg("t", () => setActiveTool("textbox"));
+    reg("n", () => setActiveTool("shape"));
     reg("c", () => setActiveTool("connector"));
     reg("e", () => setActiveTool("eraser"));
     reg("p", () => setActiveTool("draw"));

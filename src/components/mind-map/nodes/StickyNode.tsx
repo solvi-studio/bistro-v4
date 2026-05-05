@@ -10,6 +10,7 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import NodeToolbar from "@/components/mind-map/toolbar/NodeToolbar";
+import QuickConnectArrows from "@/components/mind-map/canvas/QuickConnectArrows";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -94,11 +95,11 @@ export default function StickyNode({ id, data, selected }: NodeProps<StickyNodeT
   const fontSize = data.fontSize ?? 14;
 
   return (
-    <div className="group relative w-full h-full min-w-[160px] min-h-[160px] select-none">
+    <div className="group relative w-full h-full min-w-[60px] min-h-[60px] select-none">
       <NodeResizer
         isVisible={selected}
-        minWidth={160}
-        minHeight={160}
+        minWidth={60}
+        minHeight={60}
         lineStyle={{ border: "1.5px solid #94a3b8" }}
         handleStyle={{
           width: 8,
@@ -110,11 +111,16 @@ export default function StickyNode({ id, data, selected }: NodeProps<StickyNodeT
       />
 
       <NodeToolbar nodeType="sticky" id={id} data={data} selected={!!selected} />
+      <QuickConnectArrows id={id} selected={!!selected} />
 
+      <Handle type="source" position={Position.Top}    id="top"    className={HANDLE_CLS} />
       <Handle type="target" position={Position.Top}    id="top"    className={HANDLE_CLS} />
+      <Handle type="source" position={Position.Left}   id="left"   className={HANDLE_CLS} />
       <Handle type="target" position={Position.Left}   id="left"   className={HANDLE_CLS} />
       <Handle type="source" position={Position.Bottom} id="bottom" className={HANDLE_CLS} />
+      <Handle type="target" position={Position.Bottom} id="bottom" className={HANDLE_CLS} />
       <Handle type="source" position={Position.Right}  id="right"  className={HANDLE_CLS} />
+      <Handle type="target" position={Position.Right}  id="right"  className={HANDLE_CLS} />
 
       <div
         className="absolute inset-0 rounded-sm shadow-md overflow-hidden"

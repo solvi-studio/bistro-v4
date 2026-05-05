@@ -11,6 +11,7 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import NodeToolbar from "@/components/mind-map/toolbar/NodeToolbar";
+import QuickConnectArrows from "@/components/mind-map/canvas/QuickConnectArrows";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -113,6 +114,7 @@ export default function TextBoxNode({ id, data, selected }: NodeProps<TextBoxNod
         isEditing={isEditing}
         onStartEditing={startEditing}
       />
+      <QuickConnectArrows id={id} selected={!!selected} />
 
       <NodeResizeControl
         variant={ResizeControlVariant.Line}
@@ -129,10 +131,14 @@ export default function TextBoxNode({ id, data, selected }: NodeProps<TextBoxNod
         className={selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
       />
 
+      <Handle type="source" position={Position.Top}    id="top"    className={HANDLE_CLS} />
       <Handle type="target" position={Position.Top}    id="top"    className={HANDLE_CLS} />
+      <Handle type="source" position={Position.Left}   id="left"   className={HANDLE_CLS} />
       <Handle type="target" position={Position.Left}   id="left"   className={HANDLE_CLS} />
       <Handle type="source" position={Position.Bottom} id="bottom" className={HANDLE_CLS} />
+      <Handle type="target" position={Position.Bottom} id="bottom" className={HANDLE_CLS} />
       <Handle type="source" position={Position.Right}  id="right"  className={HANDLE_CLS} />
+      <Handle type="target" position={Position.Right}  id="right"  className={HANDLE_CLS} />
 
       <div
         ref={editorRef}
