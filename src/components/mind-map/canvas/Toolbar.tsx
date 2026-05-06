@@ -1,6 +1,6 @@
 "use client";
 
-import { MousePointer2, StickyNote, Type, Shapes, Spline, Eraser, PenLine } from "lucide-react";
+import { MousePointer2, StickyNote, Type, Shapes, Spline, Eraser, PenLine, Download, Upload } from "lucide-react";
 import { useTool, Tool } from "@/components/mind-map/context/ToolContext";
 import { SHAPE_TYPES, SHAPE_ICONS } from "@/components/mind-map/nodes/ShapeNode";
 
@@ -21,7 +21,12 @@ const TOOLS: ToolDef[] = [
   { tool: "draw",      label: "Freehand Draw",  shortcut: "P", icon: <PenLine size={18} /> },
 ];
 
-export default function Toolbar() {
+interface ToolbarProps {
+  onExport?: () => void;
+  onImport?: () => void;
+}
+
+export default function Toolbar({ onExport, onImport }: ToolbarProps) {
   const { activeTool, setActiveTool, pendingShape, setPendingShape } = useTool();
 
   return (
@@ -52,6 +57,34 @@ export default function Toolbar() {
             </button>
           );
         })}
+
+        {(onExport || onImport) && (
+          <div className="my-0.5 h-px bg-gray-100" />
+        )}
+
+        {onExport && (
+          <button
+            type="button"
+            onClick={onExport}
+            title="Export map as JSON"
+            aria-label="Export"
+            className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+          >
+            <Download size={18} />
+          </button>
+        )}
+
+        {onImport && (
+          <button
+            type="button"
+            onClick={onImport}
+            title="Import map from JSON"
+            aria-label="Import"
+            className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+          >
+            <Upload size={18} />
+          </button>
+        )}
       </div>
 
       {activeTool === "shape" && (

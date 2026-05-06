@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -17,6 +17,7 @@ import {
   Connection,
   useReactFlow,
   useOnViewportChange,
+  Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -32,6 +33,11 @@ import { edgeTypes, EDGE_MARKER } from "@/components/mind-map/edges/edgeTypes";
 import { INITIAL_NODES, INITIAL_EDGES } from "@/components/mind-map/constants/initialData";
 import Toolbar from "@/components/mind-map/canvas/Toolbar";
 import { EraserCursor } from "@/components/mind-map/canvas/EraserCursor";
+import {
+  useMindMapPersistence,
+  loadSavedMap,
+} from "@/components/mind-map/hooks/useMindMapPersistence";
+import { restoreNodes, restoreEdges } from "@/components/mind-map/lib/mindmap-serializer";
 
 // ─── Cursor map per tool ──────────────────────────────────────────────────────
 
@@ -45,14 +51,65 @@ const CURSOR: Record<Tool, string> = {
   draw:      "crosshair",
 };
 
+const MAP_ID = "default";
+const MAP_NAME = "My Map";
+
 // ─── Inner canvas (must be inside ReactFlowProvider) ─────────────────────────
 
 function CanvasInner() {
   const { activeTool, setActiveTool, pendingShape } = useTool();
-  const { screenToFlowPosition, deleteElements, getNodes, getEdges, addNodes } = useReactFlow();
+  const { screenToFlowPosition, deleteElements, getNodes, getEdges, addNodes, setViewport, getViewport } = useReactFlow();
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
+  // Load from localStorage on first render; fall back to demo data
+  const [initialData] = useState(() => {
+    const saved = loadSavedMap(MAP_ID);
+    if (saved) {
+      return {
+        nodes: restoreNodes(saved.nodes),
+        edges: restoreEdges(saved.edges),
+        viewport: saved.viewport as Viewport | null,
+        createdAt: saved.meta.createdAt,
+      };
+    }
+    return {
+      nodes: INITIAL_NODES as Node[],
+      edges: INITIAL_EDGES as Edge[],
+      viewport: null as Viewport | null,
+      createdAt: new Date().toISOString(),
+    };
+  });
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialData.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialData.edges);
+
+  // Restore saved viewport after ReactFlow mounts
+  useEffect(() => {
+    if (initialData.viewport) {
+      setViewport(initialData.viewport);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const importFileRef = useRef<HTMLInputElement>(null);
+
+  const onImport = useCallback(
+    (restoredNodes: Node[], restoredEdges: Edge[], viewport: Viewport) => {
+      setNodes(restoredNodes);
+      setEdges(restoredEdges);
+      setViewport(viewport);
+    },
+    [setNodes, setEdges, setViewport]
+  );
+
+  const { saveStatus, errorMessage, exportToFile, importFromFile } = useMindMapPersistence({
+    mapId: MAP_ID,
+    mapName: MAP_NAME,
+    nodes,
+    edges,
+    getViewport,
+    onImport,
+    createdAt: initialData.createdAt,
+  });
 
   const isSelectTool = activeTool === "select";
 
@@ -168,7 +225,7 @@ function CanvasInner() {
         selectionOnDrag={isSelectTool}
         selectNodesOnDrag={false}
         deleteKeyCode={null}
-        fitView
+        fitView={!initialData.viewport}
         fitViewOptions={{ padding: 0.3 }}
         minZoom={0.1}
         maxZoom={4}
@@ -196,6 +253,35 @@ function CanvasInner() {
           <path d={livePath} fill="#1a1a1a" />
         </svg>
       )}
+
+      {/* Save status toast */}
+      {(saveStatus === "saved" || saveStatus === "error") && (
+        <div
+          className={[
+            "absolute bottom-4 right-4 z-20 px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm border",
+            saveStatus === "saved"
+              ? "bg-white text-gray-500 border-gray-200"
+              : "bg-red-50 text-red-600 border-red-200",
+          ].join(" ")}
+        >
+          {saveStatus === "saved" ? "Saved" : (errorMessage ?? "Save failed")}
+        </div>
+      )}
+
+      {/* Hidden file input for import */}
+      <input
+        ref={importFileRef}
+        type="file"
+        accept=".json,.mindmap.json"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) importFromFile(file);
+          e.target.value = "";
+        }}
+      />
+
+      <Toolbar onExport={exportToFile} onImport={() => importFileRef.current?.click()} />
     </div>
   );
 }
@@ -227,7 +313,6 @@ function CanvasRoot() {
         <ReactFlowProvider>
           <CanvasInner />
         </ReactFlowProvider>
-        <Toolbar />
       </div>
     </div>
   );
