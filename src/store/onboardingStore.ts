@@ -4,16 +4,14 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { getInitialOnboardingData } from "@/utils/onboarding";
 
-export type Screen = "name" | "content" | "character" | "pain" | "loading" | "summary";
-
-export const CHARACTERS = ["chef", "scholar", "explorer", "creator", "traveler"] as const;
+export type Screen = "name" | "content" | "pain" | "loading" | "summary";
 
 interface OnboardingState {
   // Form data
   name: string;
   contentTypes: string[];
-  character: number | null;
   painPoints: string;
+  tiktokUrl: string;
 
   // Navigation
   currentScreen: Screen;
@@ -28,8 +26,8 @@ interface OnboardingState {
   addContentType: (type: string) => void;
   removeContentType: (type: string) => void;
   setContentTypes: (types: string[]) => void;
-  setCharacter: (index: number | null) => void;
   setPainPoints: (points: string) => void;
+  setTiktokUrl: (url: string) => void;
 
   // Actions - navigation
   advance: () => void;
@@ -42,7 +40,7 @@ interface OnboardingState {
   setOthersText: (text: string) => void;
 }
 
-const SCREEN_ORDER: Screen[] = ["name", "content", "character", "pain", "loading", "summary"];
+const SCREEN_ORDER: Screen[] = ["name", "content", "pain", "loading", "summary"];
 
 // Selector functions for derived state.
 // Note: getter properties in zustand state don't survive Object.assign merges in `set`,
@@ -53,8 +51,6 @@ export const selectCanAdvance = (state: OnboardingState): boolean => {
       return state.name.trim().length > 0;
     case "content":
       return state.contentTypes.length > 0;
-    case "character":
-      return state.character !== null;
     case "pain":
       return state.painPoints.trim().length > 0;
     case "loading":
@@ -78,8 +74,8 @@ export const useOnboardingStore = create<OnboardingState>()(
         // Initial state
         name: initialData.name,
         contentTypes: initialData.dataLane,
-        character: null,
         painPoints: initialData.challenge,
+        tiktokUrl: initialData.tiktokUrl ?? "",
         currentScreen: "name",
         isComplete: false,
         othersExpanded: false,
@@ -92,8 +88,8 @@ export const useOnboardingStore = create<OnboardingState>()(
         removeContentType: (type) =>
           set((state) => ({ contentTypes: state.contentTypes.filter((t) => t !== type) })),
         setContentTypes: (types) => set({ contentTypes: types }),
-        setCharacter: (index) => set({ character: index }),
         setPainPoints: (points) => set({ painPoints: points }),
+        setTiktokUrl: (url) => set({ tiktokUrl: url }),
 
         // Navigation actions
         advance: () => {
@@ -126,8 +122,8 @@ export const useOnboardingStore = create<OnboardingState>()(
       partialize: (state) => ({
         name: state.name,
         contentTypes: state.contentTypes,
-        character: state.character,
         painPoints: state.painPoints,
+        tiktokUrl: state.tiktokUrl,
         isComplete: state.isComplete,
       }),
     },

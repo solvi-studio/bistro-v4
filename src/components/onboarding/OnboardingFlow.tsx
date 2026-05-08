@@ -3,11 +3,10 @@
 import dynamic from "next/dynamic";
 import { AnimatePresence } from "framer-motion";
 import { useCallback, useEffect } from "react";
-import { useOnboardingStore, selectCanAdvance, selectCanRetreat, CHARACTERS } from "@/store/onboardingStore";
+import { useOnboardingStore, selectCanAdvance, selectCanRetreat } from "@/store/onboardingStore";
 import { markOnboardingDone } from "@/utils/onboarding";
 import NameScreen from "./screens/NameScreen";
 import ContentScreen from "./screens/ContentScreen";
-import CharacterScreen from "./screens/CharacterScreen";
 import PainScreen from "./screens/PainScreen";
 import LoadingScreen from "./screens/LoadingScreen";
 import SummaryScreen from "./screens/SummaryScreen";
@@ -24,30 +23,26 @@ export default function OnboardingFlow({ onComplete }: Props) {
     currentScreen,
     advance,
     retreat,
-    character,
     name,
     contentTypes,
     painPoints,
+    tiktokUrl,
     markComplete,
   } = useOnboardingStore();
 
   const canAdvance = useOnboardingStore(selectCanAdvance);
   const canRetreat = useOnboardingStore(selectCanRetreat);
 
-  const characterSrc = character !== null
-    ? `/icon/${CHARACTERS[character]}.png`
-    : undefined;
-
   const handleFinish = useCallback(() => {
     markOnboardingDone({
       name,
       dataLane: contentTypes,
       challenge: painPoints,
-      character: character !== null ? CHARACTERS[character] : undefined,
+      tiktokUrl,
     });
     markComplete();
     onComplete();
-  }, [character, contentTypes, name, onComplete, painPoints, markComplete]);
+  }, [contentTypes, name, onComplete, painPoints, tiktokUrl, markComplete]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -91,14 +86,11 @@ export default function OnboardingFlow({ onComplete }: Props) {
         {currentScreen === "content" && (
           <ContentScreen key="content" onNext={advance} />
         )}
-        {currentScreen === "character" && (
-          <CharacterScreen key="character" onNext={advance} />
-        )}
         {currentScreen === "pain" && (
-          <PainScreen key="pain" onNext={advance} avatarSrc={characterSrc} />
+          <PainScreen key="pain" onNext={advance} />
         )}
         {currentScreen === "loading" && (
-          <LoadingScreen key="loading" onDone={advance} avatarSrc={characterSrc} />
+          <LoadingScreen key="loading" onDone={advance} />
         )}
         {currentScreen === "summary" && (
           <SummaryScreen key="summary" onFinish={handleFinish} />

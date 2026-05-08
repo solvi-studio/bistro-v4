@@ -29,5 +29,5 @@ export default function OnboardingPageClient() {
     );
   }
 
-  return <OnboardingFlow onComplete={() => router.replace("/")} />;
+  return <OnboardingFlow onComplete={() => router.replace("/login")} />;
 }

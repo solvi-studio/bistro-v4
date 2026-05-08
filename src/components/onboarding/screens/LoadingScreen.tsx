@@ -14,10 +14,9 @@ const LOADING_PHASES = [
 
 interface LoadingScreenProps {
   onDone: () => void;
-  avatarSrc?: string;
 }
 
-export default function LoadingScreen({ onDone, avatarSrc }: LoadingScreenProps) {
+export default function LoadingScreen({ onDone }: LoadingScreenProps) {
   const barRef = useRef<HTMLDivElement>(null);
   const [phaseIdx, setPhaseIdx] = useState(0);
   const phase = LOADING_PHASES[phaseIdx];
@@ -55,7 +54,7 @@ export default function LoadingScreen({ onDone, avatarSrc }: LoadingScreenProps)
       <Blob color="#f5d88a" className="w-60 h-60 -bottom-20 -left-20" />
       <Blob color="#93c5fd" className="w-50 h-50 -top-15 -right-15" />
       <div className="relative flex flex-col items-center">
-        <MascotAvatar size={130} src={avatarSrc} />
+        <MascotAvatar size={130} />
         <p className="text-[15px] text-[#bbb] mb-4 font-semibold tracking-wide">
           {phase.pct}%
         </p>

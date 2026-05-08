@@ -8,7 +8,7 @@ export const OnboardingSchema = z.object({
   name: z.string().min(1, "Name is required").max(50, "Name too long"),
   dataLane: z.array(z.string()).min(1, "At least one content lane required"),
   challenge: z.string().min(1, "Challenge is required").max(500, "Challenge too long"),
-  character: z.enum(["chef", "scholar", "explorer", "creator", "traveler"]).optional(),
+  tiktokUrl: z.string().max(500).optional(),
 });
 
 export type OnboardingData = z.infer<typeof OnboardingSchema>;

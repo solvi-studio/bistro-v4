@@ -12,8 +12,8 @@ const CHIP_EMOJIS: Record<string, string> = {
   "content management": "📊",
 };
 
-export default function PainScreen({ onNext, avatarSrc }: { onNext: () => void; avatarSrc?: string }) {
-  const { painPoints, setPainPoints } = useOnboardingStore();
+export default function PainScreen({ onNext }: { onNext: () => void }) {
+  const { painPoints, setPainPoints, tiktokUrl, setTiktokUrl } = useOnboardingStore();
   const canAdvance = useOnboardingStore(selectCanAdvance);
 
   const toggleChip = (chip: string) => {
@@ -41,18 +41,20 @@ export default function PainScreen({ onNext, avatarSrc }: { onNext: () => void; 
         <Blob color="#fca5a5" className="w-55 h-55 -top-8 -left-12" />
         <Blob color="#86efac" className="w-50 h-50 -bottom-8 -right-8" />
         <div className="relative">
-          <MascotAvatar size={130} src={avatarSrc} />
+          <MascotAvatar size={130} />
           <p className="mb-2 text-center text-[26px] leading-[1.45] font-semibold text-[#1a1a1a]">
             Got it!
           </p>
           <p className="text-[26px] font-semibold text-[#1a1a1a] text-center mb-6 leading-normal">
-            Now, when it comes to creating content...what's been slowing you down lately?
+            Now drop your TikTok page to understand your existing taste?
           </p>
           <input
             className="w-full rounded-full bg-[#eef0f6] px-6 py-4 text-[17px] text-[#1a1a1a] outline-none placeholder:text-[#aaa] mb-4"
-            placeholder="ideas, consistency, overthinking… whatever it is"
-            value={painPoints}
-            onChange={(e) => setPainPoints(e.target.value)}
+            placeholder="LINK drop here"
+            value={tiktokUrl}
+            onChange={(e) => setTiktokUrl(e.target.value)}
+            inputMode="url"
+            autoComplete="url"
           />
           <div className="flex flex-wrap justify-center gap-4">
             {PAIN_CHIPS.map((chip) => {
@@ -79,11 +81,13 @@ export default function PainScreen({ onNext, avatarSrc }: { onNext: () => void; 
           </div>
         </div>
       </motion.div>
-      <div className="fixed bottom-5 right-5 z-[100000]">
+      <div className="fixed bottom-5 right-5 z-[100000] flex items-center gap-3">
+        <span className="text-[15px] font-semibold text-[#52596b]">This feels right!</span>
         <button
           type="button"
           onClick={onNext}
           disabled={!canAdvance}
+          aria-label="Continue"
           className="w-10 h-10 rounded-full bg-[#3b7cf4] flex items-center justify-center text-white text-[20px] font-semibold shadow-md transition-all hover:bg-[#2f67dc] disabled:opacity-40 disabled:cursor-not-allowed"
         >
           →

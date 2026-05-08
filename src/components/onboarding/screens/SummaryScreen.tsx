@@ -5,13 +5,8 @@ import Image from "next/image";
 import { useOnboardingStore } from "@/store/onboardingStore";
 import Blob from "../Blob";
 
-const CHARACTERS = ["chef", "scholar", "explorer", "creator", "traveler"] as const;
-
 export default function SummaryScreen({ onFinish }: { onFinish: () => void }) {
-  const { name, contentTypes, painPoints, character } = useOnboardingStore();
-  const characterSrc = character !== null
-    ? `/icon/${CHARACTERS[character]}.png`
-    : "/icon/mascot.png";
+  const { name, contentTypes, tiktokUrl } = useOnboardingStore();
 
   return (
     <motion.div
@@ -47,7 +42,7 @@ export default function SummaryScreen({ onFinish }: { onFinish: () => void }) {
         <div className="w-full rounded-[24px] bg-[#dce8fb] px-7 py-6 text-left mb-8">
           <div className="flex items-center gap-4 mb-5">
             <Image
-              src={characterSrc}
+              src="/icon/mascot.png"
               alt="avatar"
               className="h-14 w-14 shrink-0 rounded-full object-cover"
               width={56}
@@ -74,26 +69,16 @@ export default function SummaryScreen({ onFinish }: { onFinish: () => void }) {
             </div>
           </div>
 
-          {painPoints.trim() && (
-            <div>
-              <p className="text-[15px] font-semibold text-[#0f172a] mb-2">
-                What's been holding you back
+          <div>
+            <p className="text-[15px] font-semibold text-[#0f172a] mb-2">
+              Your TikTok Link
+            </p>
+            <div className="rounded-[14px] bg-white/60 px-5 py-4">
+              <p className="text-[14px] text-[#52596b] leading-[1.6] break-all">
+                {tiktokUrl.trim() ? tiktokUrl : "Not provided"}
               </p>
-              <div className="rounded-[14px] bg-white/60 px-5 py-4">
-                <ul className="space-y-1.5">
-                  {painPoints
-                    .split(",")
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                    .map((p) => (
-                      <li key={p} className="text-[14px] text-[#52596b] leading-[1.6]">
-                        • {p}
-                      </li>
-                    ))}
-                </ul>
-              </div>
             </div>
-          )}
+          </div>
 
           <p className="mt-5 text-[13px] !font-light italic text-black leading-normal text-center">
             Does this feel right? Let's start working together to unravel these frictions
@@ -105,7 +90,7 @@ export default function SummaryScreen({ onFinish }: { onFinish: () => void }) {
           onClick={onFinish}
           className="rounded-[18px] bg-[#22c55e] hover:bg-[#16a34a] text-white font-semibold text-[22px] px-4 py-4 transition-colors shadow-md"
         >
-          Start collecting ideas
+          Proceed pls
         </button>
       </div>
     </motion.div>
