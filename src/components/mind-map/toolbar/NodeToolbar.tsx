@@ -6,11 +6,27 @@ import {
   Position,
   useReactFlow,
 } from "@xyflow/react";
-import { Bold, Copy, Italic, Palette, Strikethrough, Trash2 } from "lucide-react";
+import {
+  Bold,
+  Copy,
+  Italic,
+  Palette,
+  Strikethrough,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { StickyData, STICKY_COLORS } from "@/components/mind-map/nodes/StickyNode";
+import {
+  StickyData,
+  STICKY_COLORS,
+} from "@/components/mind-map/nodes/StickyNode";
 import { TextBoxData, FontSize } from "@/components/mind-map/nodes/TextBoxNode";
-import { ShapeData, ShapeType, SHAPE_FILL_COLORS, SHAPE_ICONS, SHAPE_TYPES } from "@/components/mind-map/nodes/ShapeNode";
+import {
+  ShapeData,
+  ShapeType,
+  SHAPE_FILL_COLORS,
+  SHAPE_ICONS,
+  SHAPE_TYPES,
+} from "@/components/mind-map/nodes/ShapeNode";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -72,8 +88,8 @@ function ToolBtn({
         active
           ? "bg-gray-100 text-gray-900"
           : danger
-          ? "text-gray-400 hover:bg-red-50 hover:text-red-500"
-          : "text-gray-500 hover:bg-gray-50 hover:text-gray-800",
+            ? "text-gray-400 hover:bg-red-50 hover:text-red-500"
+            : "text-gray-500 hover:bg-gray-50 hover:text-gray-800",
       ].join(" ")}
     >
       {children}
@@ -148,11 +164,7 @@ function FontSizeRow({
   return (
     <>
       {presets.map(({ label, value: pv }) => (
-        <ToolBtn
-          key={label}
-          active={value === pv}
-          onClick={() => onChange(pv)}
-        >
+        <ToolBtn key={label} active={value === pv} onClick={() => onChange(pv)}>
           {label}
         </ToolBtn>
       ))}
@@ -220,7 +232,11 @@ function StickyControls({ id, data }: { id: string; data: StickyData }) {
         <Copy size={13} />
       </ToolBtn>
 
-      <ToolBtn title="Delete" danger onClick={() => deleteElements({ nodes: [{ id }], edges: [] })}>
+      <ToolBtn
+        title="Delete"
+        danger
+        onClick={() => deleteElements({ nodes: [{ id }], edges: [] })}
+      >
         <Trash2 size={13} />
       </ToolBtn>
     </>
@@ -230,9 +246,9 @@ function StickyControls({ id, data }: { id: string; data: StickyData }) {
 // ─── TextBox section ───────────────────────────────────────────────────────────
 
 const TEXTBOX_FONT_SIZES: { label: string; key: FontSize }[] = [
-  { label: "S",  key: "sm" },
-  { label: "M",  key: "md" },
-  { label: "L",  key: "lg" },
+  { label: "S", key: "sm" },
+  { label: "M", key: "md" },
+  { label: "L", key: "lg" },
   { label: "XL", key: "xl" },
 ];
 
@@ -255,7 +271,8 @@ function TextBoxControls({
     setTimeout(() => document.execCommand(command, false), 0);
   };
 
-  const handleFontSize = (key: FontSize) => updateNodeData(id, { fontSize: key });
+  const handleFontSize = (key: FontSize) =>
+    updateNodeData(id, { fontSize: key });
   const handleDelete = () => deleteElements({ nodes: [{ id }], edges: [] });
 
   return (
@@ -348,7 +365,11 @@ function ShapeControls({ id, data }: { id: string; data: ShapeData }) {
         <Copy size={13} />
       </ToolBtn>
 
-      <ToolBtn title="Delete" danger onClick={() => deleteElements({ nodes: [{ id }], edges: [] })}>
+      <ToolBtn
+        title="Delete"
+        danger
+        onClick={() => deleteElements({ nodes: [{ id }], edges: [] })}
+      >
         <Trash2 size={13} />
       </ToolBtn>
     </>
@@ -359,7 +380,11 @@ function ShapeControls({ id, data }: { id: string; data: ShapeData }) {
 
 export default function NodeToolbar(props: Props) {
   return (
-    <FlowNodeToolbar isVisible={props.selected} position={Position.Top} offset={8}>
+    <FlowNodeToolbar
+      isVisible={props.selected}
+      position={Position.Top}
+      offset={8}
+    >
       <div className="bg-white border border-gray-200 rounded-xl shadow-md px-2 py-1.5 flex items-center gap-1 text-xs select-none">
         {props.nodeType === "sticky" ? (
           <StickyControls id={props.id} data={props.data} />

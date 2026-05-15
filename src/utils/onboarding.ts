@@ -7,7 +7,10 @@ export const SCHEMA_VERSION = 1;
 export const OnboardingSchema = z.object({
   name: z.string().min(1, "Name is required").max(50, "Name too long"),
   dataLane: z.array(z.string()).min(1, "At least one content lane required"),
-  challenge: z.string().min(1, "Challenge is required").max(500, "Challenge too long"),
+  challenge: z
+    .string()
+    .min(1, "Challenge is required")
+    .max(500, "Challenge too long"),
   tiktokUrl: z.string().max(500).optional(),
 });
 
@@ -66,7 +69,9 @@ export function getInitialOnboardingData(): OnboardingData {
     // Handle schema migrations
     const storedVersion = parsed.__schemaVersion as number | undefined;
     if (storedVersion !== SCHEMA_VERSION) {
-      console.log(`Schema version mismatch: stored=${storedVersion}, current=${SCHEMA_VERSION}`);
+      console.log(
+        `Schema version mismatch: stored=${storedVersion}, current=${SCHEMA_VERSION}`,
+      );
       // For now, return defaults on version mismatch
       // Future: implement migrateSchema(parsed, storedVersion)
       return { name: "", dataLane: [], challenge: "" };

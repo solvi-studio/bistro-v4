@@ -81,7 +81,8 @@ export default function SummaryScreen({ onFinish }: { onFinish: () => void }) {
           </div>
 
           <p className="mt-5 text-[13px] !font-light italic text-black leading-normal text-center">
-            Does this feel right? Let's start working together to unravel these frictions
+            Does this feel right? Let's start working together to unravel these
+            frictions
           </p>
         </div>
 

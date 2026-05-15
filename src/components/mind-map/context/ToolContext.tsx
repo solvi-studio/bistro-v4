@@ -1,9 +1,22 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+} from "react";
 import type { ShapeType } from "@/components/mind-map/nodes/ShapeNode";
 
-export type Tool = "select" | "sticky" | "textbox" | "shape" | "connector" | "eraser" | "draw";
+export type Tool =
+  | "select"
+  | "sticky"
+  | "textbox"
+  | "shape"
+  | "connector"
+  | "eraser"
+  | "draw";
 
 type ToolContextValue = {
   activeTool: Tool;
@@ -27,7 +40,9 @@ export function ToolProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ToolContext.Provider value={{ activeTool, setActiveTool, pendingShape, setPendingShape }}>
+    <ToolContext.Provider
+      value={{ activeTool, setActiveTool, pendingShape, setPendingShape }}
+    >
       {children}
     </ToolContext.Provider>
   );

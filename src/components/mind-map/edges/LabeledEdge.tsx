@@ -29,7 +29,12 @@ export type LabeledEdgeData = {
 export type LabeledEdgeType = Edge<LabeledEdgeData, "labeled">;
 
 // Marker config applied to edge when an arrow side is enabled
-export const EDGE_MARKER = { type: MarkerType.ArrowClosed, width: 16, height: 16, color: "#9ca3af" };
+export const EDGE_MARKER = {
+  type: MarkerType.ArrowClosed,
+  width: 16,
+  height: 16,
+  color: "#9ca3af",
+};
 
 // ─── Path helper ──────────────────────────────────────────────────────────────
 
@@ -42,7 +47,7 @@ function getEdgePath(
     targetX: number;
     targetY: number;
     targetPosition: Position;
-  }
+  },
 ) {
   if (type === "straight") return getStraightPath(params);
   if (type === "bezier") return getBezierPath(params);
@@ -98,17 +103,25 @@ export default function LabeledEdge({
           if (e.id !== id) return e;
           return {
             ...e,
-            markerStart: isStart ? (next ? EDGE_MARKER : undefined) : e.markerStart,
-            markerEnd:   !isStart ? (next ? EDGE_MARKER : undefined) : e.markerEnd,
+            markerStart: isStart
+              ? next
+                ? EDGE_MARKER
+                : undefined
+              : e.markerStart,
+            markerEnd: !isStart
+              ? next
+                ? EDGE_MARKER
+                : undefined
+              : e.markerEnd,
             data: {
               ...e.data,
               [isStart ? "arrowStart" : "arrowEnd"]: next,
             },
           };
-        })
+        }),
       );
     },
-    [id, arrowStart, arrowEnd, setEdges]
+    [id, arrowStart, arrowEnd, setEdges],
   );
 
   const startEditing = useCallback(() => {
@@ -121,7 +134,7 @@ export default function LabeledEdge({
       setIsEditing(false);
       updateEdgeData(id, { label: val.trim() });
     },
-    [id, updateEdgeData]
+    [id, updateEdgeData],
   );
 
   return (
@@ -149,22 +162,24 @@ export default function LabeledEdge({
           {selected && (
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 bg-white border border-gray-200 rounded-xl shadow-md px-2 py-1.5 flex items-center gap-1 text-xs select-none whitespace-nowrap z-10">
               {/* Path type */}
-              {(["smoothstep", "straight", "bezier"] as EdgeStyleType[]).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  title={t}
-                  onClick={() => updateEdgeData(id, { edgeType: t })}
-                  className={[
-                    "h-6 px-1.5 rounded-md text-[10px] font-medium transition-colors",
-                    edgeType === t
-                      ? "bg-gray-100 text-gray-900"
-                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-800",
-                  ].join(" ")}
-                >
-                  {EDGE_STYLE_LABELS[t]}
-                </button>
-              ))}
+              {(["smoothstep", "straight", "bezier"] as EdgeStyleType[]).map(
+                (t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    title={t}
+                    onClick={() => updateEdgeData(id, { edgeType: t })}
+                    className={[
+                      "h-6 px-1.5 rounded-md text-[10px] font-medium transition-colors",
+                      edgeType === t
+                        ? "bg-gray-100 text-gray-900"
+                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-800",
+                    ].join(" ")}
+                  >
+                    {EDGE_STYLE_LABELS[t]}
+                  </button>
+                ),
+              )}
 
               <div className="w-px h-4 bg-gray-200 mx-0.5 shrink-0" />
 

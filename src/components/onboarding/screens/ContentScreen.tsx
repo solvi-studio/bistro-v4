@@ -12,7 +12,17 @@ const LANE_EMOJIS: Record<string, string> = {
 };
 
 export default function ContentScreen({ onNext }: { onNext: () => void }) {
-  const { name, contentTypes, addContentType, removeContentType, setContentTypes, othersExpanded, setOthersExpanded, othersText, setOthersText } = useOnboardingStore();
+  const {
+    name,
+    contentTypes,
+    addContentType,
+    removeContentType,
+    setContentTypes,
+    othersExpanded,
+    setOthersExpanded,
+    othersText,
+    setOthersText,
+  } = useOnboardingStore();
   const canAdvance = useOnboardingStore(selectCanAdvance);
 
   const toggleContentType = (opt: string) => {
@@ -25,11 +35,17 @@ export default function ContentScreen({ onNext }: { onNext: () => void }) {
 
   const handleOthersChange = (value: string) => {
     setOthersText(value);
-    const withoutOthers = contentTypes.filter((t) => !t.startsWith("Others:") && t !== "Others");
-    const parts = value.split(",").map((s) => s.trim()).filter(Boolean);
-    const newTypes = parts.length > 0
-      ? [...withoutOthers, ...parts.map((p) => `Others: ${p}`)]
-      : withoutOthers;
+    const withoutOthers = contentTypes.filter(
+      (t) => !t.startsWith("Others:") && t !== "Others",
+    );
+    const parts = value
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const newTypes =
+      parts.length > 0
+        ? [...withoutOthers, ...parts.map((p) => `Others: ${p}`)]
+        : withoutOthers;
     setContentTypes(newTypes);
   };
 
@@ -51,41 +67,43 @@ export default function ContentScreen({ onNext }: { onNext: () => void }) {
             What kind of <em>things</em> do you create and bring to life?
           </p>
           <div className="flex flex-col gap-3 items-center">
-            {["Educational bites", "Short-form cheap eats", "Travel Tips"].map((opt) => {
-              const selected = contentTypes.includes(opt);
-              return (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => toggleContentType(opt)}
-                  className={`w-11/12 rounded-full px-6 py-4 text-[17px] text-left transition-all border flex items-center justify-between ${
-                    selected
-                      ? "bg-[#dce8fb] border-[#1363f8] text-[#0f172a] font-semibold"
-                      : "bg-[#eef2f9] border-transparent text-[#52596b] hover:bg-[#e4ecf7]"
-                  }`}
-                >
-                  <span className="flex items-center gap-3">
-                    <span>{LANE_EMOJIS[opt]}</span>
-                    <span>{opt}</span>
-                  </span>
-                  {selected && (
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#3b7cf4"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <title>Selected</title>
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </button>
-              );
-            })}
+            {["Educational bites", "Short-form cheap eats", "Travel Tips"].map(
+              (opt) => {
+                const selected = contentTypes.includes(opt);
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => toggleContentType(opt)}
+                    className={`w-11/12 rounded-full px-6 py-4 text-[17px] text-left transition-all border flex items-center justify-between ${
+                      selected
+                        ? "bg-[#dce8fb] border-[#1363f8] text-[#0f172a] font-semibold"
+                        : "bg-[#eef2f9] border-transparent text-[#52596b] hover:bg-[#e4ecf7]"
+                    }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <span>{LANE_EMOJIS[opt]}</span>
+                      <span>{opt}</span>
+                    </span>
+                    {selected && (
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#3b7cf4"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <title>Selected</title>
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </button>
+                );
+              },
+            )}
 
             {/* Others — expands to text input when clicked */}
             {othersExpanded ? (

@@ -7,7 +7,12 @@ type CanvasCardProps = {
   nextHref: string;
 };
 
-export default function CanvasCard({ title, counter, description, nextHref }: CanvasCardProps) {
+export default function CanvasCard({
+  title,
+  counter,
+  description,
+  nextHref,
+}: CanvasCardProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="h-72 rounded-3xl bg-[#e5e7eb]" aria-hidden="true" />
@@ -16,7 +21,9 @@ export default function CanvasCard({ title, counter, description, nextHref }: Ca
           <h2 className="text-[18px] font-bold text-[#1a1a1a]">{title}</h2>
           <span className="text-[14px] text-[#52596b]">{counter}</span>
         </div>
-        <p className="text-[14px] leading-[1.5] text-[#52596b]">{description}</p>
+        <p className="text-[14px] leading-[1.5] text-[#52596b]">
+          {description}
+        </p>
         <div className="mt-3 flex justify-end">
           <Link
             href={nextHref}

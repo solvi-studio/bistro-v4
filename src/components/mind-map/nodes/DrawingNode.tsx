@@ -30,7 +30,11 @@ export function getSvgPathFromStroke(stroke: number[][]): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function DrawingNode({ id, data, selected }: NodeProps<DrawingNodeType>) {
+export default function DrawingNode({
+  id,
+  data,
+  selected,
+}: NodeProps<DrawingNodeType>) {
   const { deleteElements } = useReactFlow();
 
   const stroke = getStroke(data.points, {
@@ -59,9 +63,7 @@ export default function DrawingNode({ id, data, selected }: NodeProps<DrawingNod
           handleStyle={{ width: 6, height: 6, borderRadius: "50%", background: "#fff", border: "1.5px solid #94a3b8" }}
         />
       )} */}
-      <svg
-        className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
-      >
+      <svg className="absolute inset-0 w-full h-full overflow-visible pointer-events-none">
         <path d={pathData} fill={data.color ?? "#1a1a1a"} />
       </svg>
     </div>

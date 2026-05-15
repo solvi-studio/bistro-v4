@@ -30,13 +30,19 @@ let listenerRefCount = 0;
 
 function normalizeKey(key: string): string {
   switch (key.trim().toLowerCase()) {
-    case "esc":    return "escape";
-    case "ctrl":   return "control";
+    case "esc":
+      return "escape";
+    case "ctrl":
+      return "control";
     case "cmd":
-    case "meta":   return "meta";
-    case "option": return "alt";
-    case "del":    return "delete";
-    default:       return key.trim().toLowerCase();
+    case "meta":
+      return "meta";
+    case "option":
+      return "alt";
+    case "del":
+      return "delete";
+    default:
+      return key.trim().toLowerCase();
   }
 }
 
@@ -44,13 +50,7 @@ function parsePattern(pattern: string): string[] {
   return pattern
     .trim()
     .split(/\s+/)
-    .map((step) =>
-      step
-        .split("+")
-        .map(normalizeKey)
-        .sort()
-        .join("+")
-    );
+    .map((step) => step.split("+").map(normalizeKey).sort().join("+"));
 }
 
 // ─── Scope helpers ────────────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ export function getHotkeysScope() {
 function registerHotkey(
   pattern: string,
   scopeName: string,
-  callback: (e: KeyboardEvent) => void
+  callback: (e: KeyboardEvent) => void,
 ): () => void {
   const scope = getOrCreateScope(scopeName);
   const steps = parsePattern(pattern);
@@ -104,10 +104,9 @@ function registerHotkey(
 
 function isTyping(e: KeyboardEvent): boolean {
   const t = e.target as HTMLElement | null;
-  return !!t && (
-    t.tagName === "INPUT" ||
-    t.tagName === "TEXTAREA" ||
-    t.isContentEditable
+  return (
+    !!t &&
+    (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)
   );
 }
 
@@ -184,7 +183,14 @@ export type ShortcutDeps = {
 };
 
 export function useKeyboardShortcuts(deps: ShortcutDeps) {
-  const { setActiveTool, deleteElements, getNodes, getEdges, setNodes, setEdges } = deps;
+  const {
+    setActiveTool,
+    deleteElements,
+    getNodes,
+    getEdges,
+    setNodes,
+    setEdges,
+  } = deps;
 
   useEffect(() => {
     attachListeners();
@@ -209,7 +215,7 @@ export function useKeyboardShortcuts(deps: ShortcutDeps) {
         edges: getEdges().filter((e) => e.selected),
       });
 
-    reg("delete",    deleteSelected);
+    reg("delete", deleteSelected);
     reg("backspace", deleteSelected);
 
     const selectAll = (e: KeyboardEvent) => {
@@ -219,12 +225,12 @@ export function useKeyboardShortcuts(deps: ShortcutDeps) {
     };
 
     reg("control+a", selectAll);
-    reg("meta+a",    selectAll);
+    reg("meta+a", selectAll);
 
-    reg("control+z",       () => console.log("[shortcut] undo"));
-    reg("meta+z",          () => console.log("[shortcut] undo"));
+    reg("control+z", () => console.log("[shortcut] undo"));
+    reg("meta+z", () => console.log("[shortcut] undo"));
     reg("control+shift+z", () => console.log("[shortcut] redo"));
-    reg("meta+shift+z",    () => console.log("[shortcut] redo"));
+    reg("meta+shift+z", () => console.log("[shortcut] redo"));
 
     return () => {
       unbinds.forEach((u) => u());

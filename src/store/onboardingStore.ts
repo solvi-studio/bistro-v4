@@ -40,7 +40,13 @@ interface OnboardingState {
   setOthersText: (text: string) => void;
 }
 
-const SCREEN_ORDER: Screen[] = ["name", "content", "pain", "loading", "summary"];
+const SCREEN_ORDER: Screen[] = [
+  "name",
+  "content",
+  "pain",
+  "loading",
+  "summary",
+];
 
 // Selector functions for derived state.
 // Note: getter properties in zustand state don't survive Object.assign merges in `set`,
@@ -86,7 +92,9 @@ export const useOnboardingStore = create<OnboardingState>()(
         addContentType: (type) =>
           set((state) => ({ contentTypes: [...state.contentTypes, type] })),
         removeContentType: (type) =>
-          set((state) => ({ contentTypes: state.contentTypes.filter((t) => t !== type) })),
+          set((state) => ({
+            contentTypes: state.contentTypes.filter((t) => t !== type),
+          })),
         setContentTypes: (types) => set({ contentTypes: types }),
         setPainPoints: (points) => set({ painPoints: points }),
         setTiktokUrl: (url) => set({ tiktokUrl: url }),

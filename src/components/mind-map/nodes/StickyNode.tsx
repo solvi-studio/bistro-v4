@@ -24,9 +24,9 @@ export type StickyNodeType = Node<StickyData, "sticky">;
 
 export const STICKY_COLORS = [
   { label: "Yellow", value: "#fef9c3" },
-  { label: "Pink",   value: "#fce7f3" },
-  { label: "Blue",   value: "#dbeafe" },
-  { label: "Green",  value: "#dcfce7" },
+  { label: "Pink", value: "#fce7f3" },
+  { label: "Blue", value: "#dbeafe" },
+  { label: "Green", value: "#dcfce7" },
   { label: "Purple", value: "#f3e8ff" },
 ] as const;
 
@@ -35,7 +35,11 @@ export const STICKY_COLORS = [
 const HANDLE_CLS =
   "!w-2.5 !h-2.5 !rounded-full !border-2 !border-white !bg-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-150";
 
-export default function StickyNode({ id, data, selected }: NodeProps<StickyNodeType>) {
+export default function StickyNode({
+  id,
+  data,
+  selected,
+}: NodeProps<StickyNodeType>) {
   const { updateNodeData, deleteElements } = useReactFlow();
 
   const textRef = useRef<HTMLDivElement>(null);
@@ -76,7 +80,7 @@ export default function StickyNode({ id, data, selected }: NodeProps<StickyNodeT
       e.stopPropagation();
       startEditing();
     },
-    [startEditing]
+    [startEditing],
   );
 
   const handleKeyDown = useCallback(
@@ -89,7 +93,7 @@ export default function StickyNode({ id, data, selected }: NodeProps<StickyNodeT
       }
       e.stopPropagation();
     },
-    [id, deleteElements]
+    [id, deleteElements],
   );
 
   const fontSize = data.fontSize ?? 14;
@@ -110,17 +114,62 @@ export default function StickyNode({ id, data, selected }: NodeProps<StickyNodeT
         }}
       />
 
-      <NodeToolbar nodeType="sticky" id={id} data={data} selected={!!selected} />
+      <NodeToolbar
+        nodeType="sticky"
+        id={id}
+        data={data}
+        selected={!!selected}
+      />
       <QuickConnectArrows id={id} selected={!!selected} />
 
-      <Handle type="source" position={Position.Top}    id="top"    className={HANDLE_CLS} />
-      <Handle type="target" position={Position.Top}    id="top"    className={HANDLE_CLS} />
-      <Handle type="source" position={Position.Left}   id="left"   className={HANDLE_CLS} />
-      <Handle type="target" position={Position.Left}   id="left"   className={HANDLE_CLS} />
-      <Handle type="source" position={Position.Bottom} id="bottom" className={HANDLE_CLS} />
-      <Handle type="target" position={Position.Bottom} id="bottom" className={HANDLE_CLS} />
-      <Handle type="source" position={Position.Right}  id="right"  className={HANDLE_CLS} />
-      <Handle type="target" position={Position.Right}  id="right"  className={HANDLE_CLS} />
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="top"
+        className={HANDLE_CLS}
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="top"
+        className={HANDLE_CLS}
+      />
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="left"
+        className={HANDLE_CLS}
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="left"
+        className={HANDLE_CLS}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="bottom"
+        className={HANDLE_CLS}
+      />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="bottom"
+        className={HANDLE_CLS}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        className={HANDLE_CLS}
+      />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="right"
+        className={HANDLE_CLS}
+      />
 
       <div
         className="absolute inset-0 rounded-sm shadow-md overflow-hidden"
@@ -147,7 +196,8 @@ export default function StickyNode({ id, data, selected }: NodeProps<StickyNodeT
           aria-hidden
           className="absolute bottom-0 right-0 w-5 h-5 pointer-events-none"
           style={{
-            background: "linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.07) 50%)",
+            background:
+              "linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.07) 50%)",
           }}
         />
       </div>

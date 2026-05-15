@@ -24,7 +24,9 @@ export default function UploadPage() {
 
         <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-[#d1d5db] bg-white/40 px-8 py-14">
           <Upload className="h-9 w-9 text-[#52596b]" strokeWidth={1.5} />
-          <p className="text-[16px] font-semibold text-[#1a1a1a]">Drop your files</p>
+          <p className="text-[16px] font-semibold text-[#1a1a1a]">
+            Drop your files
+          </p>
           <p className="text-[13px] text-[#9ca3af]">
             any notes, videos, text, audio recording
           </p>

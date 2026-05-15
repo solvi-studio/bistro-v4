@@ -23,14 +23,17 @@ export function useEraser(): UseEraserReturn {
   const { deleteElements } = useReactFlow();
   const isEraserActive = activeTool === "eraser";
   const isErasingRef = useRef(false);
-  const [eraserPos, setEraserPos] = useState<{ x: number; y: number } | null>(null);
+  const [eraserPos, setEraserPos] = useState<{ x: number; y: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!isEraserActive) {
       setEraserPos(null);
       return;
     }
-    const onMove = (e: PointerEvent) => setEraserPos({ x: e.clientX, y: e.clientY });
+    const onMove = (e: PointerEvent) =>
+      setEraserPos({ x: e.clientX, y: e.clientY });
     window.addEventListener("pointermove", onMove);
     return () => window.removeEventListener("pointermove", onMove);
   }, [isEraserActive]);
@@ -44,20 +47,34 @@ export function useEraser(): UseEraserReturn {
     return () => document.getElementById("__eraser-cursor")?.remove();
   }, [isEraserActive]);
 
-  const onNodeClick: NodeMouseHandler = useCallback((_e, node) => {
-    if (isEraserActive) deleteElements({ nodes: [node], edges: [] });
-  }, [isEraserActive, deleteElements]);
+  const onNodeClick: NodeMouseHandler = useCallback(
+    (_e, node) => {
+      if (isEraserActive) deleteElements({ nodes: [node], edges: [] });
+    },
+    [isEraserActive, deleteElements],
+  );
 
-  const onNodeMouseEnter: NodeMouseHandler = useCallback((_e, node) => {
-    if (isEraserActive && isErasingRef.current) deleteElements({ nodes: [node], edges: [] });
-  }, [isEraserActive, deleteElements]);
+  const onNodeMouseEnter: NodeMouseHandler = useCallback(
+    (_e, node) => {
+      if (isEraserActive && isErasingRef.current)
+        deleteElements({ nodes: [node], edges: [] });
+    },
+    [isEraserActive, deleteElements],
+  );
 
   const handlers: EraserHandlers = {
     onNodeClick,
     onNodeMouseEnter,
-    onPointerDown: () => { if (isEraserActive) isErasingRef.current = true; },
-    onPointerUp: () => { isErasingRef.current = false; },
-    onPointerLeave: () => { isErasingRef.current = false; setEraserPos(null); },
+    onPointerDown: () => {
+      if (isEraserActive) isErasingRef.current = true;
+    },
+    onPointerUp: () => {
+      isErasingRef.current = false;
+    },
+    onPointerLeave: () => {
+      isErasingRef.current = false;
+      setEraserPos(null);
+    },
   };
 
   return { isEraserActive, eraserPos, handlers };

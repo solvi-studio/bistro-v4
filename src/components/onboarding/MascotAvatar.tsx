@@ -2,7 +2,13 @@
 
 import Image from "next/image";
 
-export default function MascotAvatar({ size = 64, src }: { size?: number; src?: string }) {
+export default function MascotAvatar({
+  size = 64,
+  src,
+}: {
+  size?: number;
+  src?: string;
+}) {
   return (
     <div className="flex justify-center mb-6">
       <Image

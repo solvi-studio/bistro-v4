@@ -1,8 +1,19 @@
 "use client";
 
-import { MousePointer2, StickyNote, Type, Shapes, Spline, Eraser, PenLine } from "lucide-react";
+import {
+  MousePointer2,
+  StickyNote,
+  Type,
+  Shapes,
+  Spline,
+  Eraser,
+  PenLine,
+} from "lucide-react";
 import { useTool, Tool } from "@/components/mind-map/context/ToolContext";
-import { SHAPE_TYPES, SHAPE_ICONS } from "@/components/mind-map/nodes/ShapeNode";
+import {
+  SHAPE_TYPES,
+  SHAPE_ICONS,
+} from "@/components/mind-map/nodes/ShapeNode";
 
 type ToolDef = {
   tool: Tool;
@@ -12,17 +23,48 @@ type ToolDef = {
 };
 
 const TOOLS: ToolDef[] = [
-  { tool: "select",    label: "Select",         shortcut: "V", icon: <MousePointer2 size={18} /> },
-  { tool: "sticky",    label: "Sticky Note",    shortcut: "S", icon: <StickyNote size={18} /> },
-  { tool: "textbox",   label: "Text Box",       shortcut: "T", icon: <Type size={18} /> },
-  { tool: "shape",     label: "Shape",          shortcut: "N", icon: <Shapes size={18} /> },
-  { tool: "connector", label: "Connector",      shortcut: "C", icon: <Spline size={18} /> },
-  { tool: "eraser",    label: "Eraser",         shortcut: "E", icon: <Eraser size={18} /> },
-  { tool: "draw",      label: "Freehand Draw",  shortcut: "P", icon: <PenLine size={18} /> },
+  {
+    tool: "select",
+    label: "Select",
+    shortcut: "V",
+    icon: <MousePointer2 size={18} />,
+  },
+  {
+    tool: "sticky",
+    label: "Sticky Note",
+    shortcut: "S",
+    icon: <StickyNote size={18} />,
+  },
+  {
+    tool: "textbox",
+    label: "Text Box",
+    shortcut: "T",
+    icon: <Type size={18} />,
+  },
+  { tool: "shape", label: "Shape", shortcut: "N", icon: <Shapes size={18} /> },
+  {
+    tool: "connector",
+    label: "Connector",
+    shortcut: "C",
+    icon: <Spline size={18} />,
+  },
+  {
+    tool: "eraser",
+    label: "Eraser",
+    shortcut: "E",
+    icon: <Eraser size={18} />,
+  },
+  {
+    tool: "draw",
+    label: "Freehand Draw",
+    shortcut: "P",
+    icon: <PenLine size={18} />,
+  },
 ];
 
 export default function Toolbar() {
-  const { activeTool, setActiveTool, pendingShape, setPendingShape } = useTool();
+  const { activeTool, setActiveTool, pendingShape, setPendingShape } =
+    useTool();
 
   return (
     <>

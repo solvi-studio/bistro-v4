@@ -1,6 +1,12 @@
 "use client";
 
-export default function Blob({ color, className }: { color: string; className: string }) {
+export default function Blob({
+  color,
+  className,
+}: {
+  color: string;
+  className: string;
+}) {
   return (
     <div
       className={`absolute rounded-full pointer-events-none ${className}`}

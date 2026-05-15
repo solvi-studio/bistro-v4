@@ -97,13 +97,14 @@ export function useDraw(): UseDrawReturn {
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (!isDrawActive) return;
-      if ((e.target as Element).closest(".react-flow__node, .react-flow__edge")) return;
+      if ((e.target as Element).closest(".react-flow__node, .react-flow__edge"))
+        return;
       isDrawingRef.current = true;
       const pt: DrawPoint = [e.clientX, e.clientY, e.pressure];
       currentPtsRef.current = [pt];
       setLivePoints([pt]);
     },
-    [isDrawActive]
+    [isDrawActive],
   );
 
   return { isDrawActive, livePoints, onPointerDown };

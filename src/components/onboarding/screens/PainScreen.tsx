@@ -13,7 +13,8 @@ const CHIP_EMOJIS: Record<string, string> = {
 };
 
 export default function PainScreen({ onNext }: { onNext: () => void }) {
-  const { painPoints, setPainPoints, tiktokUrl, setTiktokUrl } = useOnboardingStore();
+  const { painPoints, setPainPoints, tiktokUrl, setTiktokUrl } =
+    useOnboardingStore();
   const canAdvance = useOnboardingStore(selectCanAdvance);
 
   const toggleChip = (chip: string) => {
@@ -82,7 +83,9 @@ export default function PainScreen({ onNext }: { onNext: () => void }) {
         </div>
       </motion.div>
       <div className="fixed bottom-5 right-5 z-[100000] flex items-center gap-3">
-        <span className="text-[15px] font-semibold text-[#52596b]">This feels right!</span>
+        <span className="text-[15px] font-semibold text-[#52596b]">
+          This feels right!
+        </span>
         <button
           type="button"
           onClick={onNext}

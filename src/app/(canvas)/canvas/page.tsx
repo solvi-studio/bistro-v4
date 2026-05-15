@@ -7,13 +7,15 @@ const CARDS = [
   {
     title: "Inspiration Pools",
     counter: "1/2",
-    description: "This is your space where you can upload your videos to get inspired",
+    description:
+      "This is your space where you can upload your videos to get inspired",
     nextHref: "/inspiration",
   },
   {
     title: "Creativity Spaces",
     counter: "2/2",
-    description: "This is your space where you can brainstorm your next cool ideas",
+    description:
+      "This is your space where you can brainstorm your next cool ideas",
     nextHref: "#",
   },
 ] as const;

@@ -36,7 +36,11 @@ export const FONT_SIZE_MAP: Record<FontSize, number> = {
 const HANDLE_CLS =
   "!w-2 !h-2 !rounded-full !border !border-gray-300 !bg-white opacity-0 group-hover:opacity-60 transition-opacity duration-150";
 
-export default function TextBoxNode({ id, data, selected }: NodeProps<TextBoxNodeType>) {
+export default function TextBoxNode({
+  id,
+  data,
+  selected,
+}: NodeProps<TextBoxNodeType>) {
   const { deleteElements, getNode, updateNodeData } = useReactFlow();
 
   const editorRef = useRef<HTMLDivElement>(null);
@@ -50,7 +54,7 @@ export default function TextBoxNode({ id, data, selected }: NodeProps<TextBoxNod
     if (!data.html) {
       startEditing();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Sync external html → DOM when not editing
@@ -91,10 +95,13 @@ export default function TextBoxNode({ id, data, selected }: NodeProps<TextBoxNod
     updateNodeData(id, { html });
   }, [id, deleteElements, getNode, updateNodeData]);
 
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    startEditing();
-  }, [startEditing]);
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      startEditing();
+    },
+    [startEditing],
+  );
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     e.stopPropagation();
@@ -121,24 +128,68 @@ export default function TextBoxNode({ id, data, selected }: NodeProps<TextBoxNod
         position="left"
         minWidth={80}
         style={{ border: "none", width: 6, left: -3, cursor: "ew-resize" }}
-        className={selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
+        className={
+          selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        }
       />
       <NodeResizeControl
         variant={ResizeControlVariant.Line}
         position="right"
         minWidth={80}
         style={{ border: "none", width: 6, right: -3, cursor: "ew-resize" }}
-        className={selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
+        className={
+          selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        }
       />
 
-      <Handle type="source" position={Position.Top}    id="top"    className={HANDLE_CLS} />
-      <Handle type="target" position={Position.Top}    id="top"    className={HANDLE_CLS} />
-      <Handle type="source" position={Position.Left}   id="left"   className={HANDLE_CLS} />
-      <Handle type="target" position={Position.Left}   id="left"   className={HANDLE_CLS} />
-      <Handle type="source" position={Position.Bottom} id="bottom" className={HANDLE_CLS} />
-      <Handle type="target" position={Position.Bottom} id="bottom" className={HANDLE_CLS} />
-      <Handle type="source" position={Position.Right}  id="right"  className={HANDLE_CLS} />
-      <Handle type="target" position={Position.Right}  id="right"  className={HANDLE_CLS} />
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="top"
+        className={HANDLE_CLS}
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="top"
+        className={HANDLE_CLS}
+      />
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="left"
+        className={HANDLE_CLS}
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="left"
+        className={HANDLE_CLS}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="bottom"
+        className={HANDLE_CLS}
+      />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="bottom"
+        className={HANDLE_CLS}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        className={HANDLE_CLS}
+      />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="right"
+        className={HANDLE_CLS}
+      />
 
       <div
         ref={editorRef}
@@ -152,7 +203,9 @@ export default function TextBoxNode({ id, data, selected }: NodeProps<TextBoxNod
           "w-full px-1 leading-snug text-gray-800 break-words whitespace-pre-wrap",
           "focus:outline-none bg-transparent",
           isEditing ? "nodrag nopan cursor-text" : "cursor-default",
-          selected && !isEditing ? "ring-1 ring-blue-300 ring-offset-1 rounded-sm" : "",
+          selected && !isEditing
+            ? "ring-1 ring-blue-300 ring-offset-1 rounded-sm"
+            : "",
           !data.html && !isEditing ? "text-gray-300" : "",
         ].join(" ")}
       />

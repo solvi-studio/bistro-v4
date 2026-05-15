@@ -3,7 +3,11 @@
 import dynamic from "next/dynamic";
 import { AnimatePresence } from "framer-motion";
 import { useCallback, useEffect } from "react";
-import { useOnboardingStore, selectCanAdvance, selectCanRetreat } from "@/store/onboardingStore";
+import {
+  useOnboardingStore,
+  selectCanAdvance,
+  selectCanRetreat,
+} from "@/store/onboardingStore";
 import { markOnboardingDone } from "@/utils/onboarding";
 import NameScreen from "./screens/NameScreen";
 import ContentScreen from "./screens/ContentScreen";
@@ -13,7 +17,9 @@ import SummaryScreen from "./screens/SummaryScreen";
 
 const BackgroundCanvas = dynamic(() => import("./t3-empty/backgroundCanvas"), {
   ssr: false,
-  loading: () => <div className="fixed inset-0 bg-gradient-to-br from-indigo-50 to-purple-50" />,
+  loading: () => (
+    <div className="fixed inset-0 bg-gradient-to-br from-indigo-50 to-purple-50" />
+  ),
 });
 
 type Props = { onComplete: () => void };
@@ -56,12 +62,14 @@ export default function OnboardingFlow({ onComplete }: Props) {
         event.defaultPrevented ||
         event.isComposing ||
         event.target instanceof HTMLTextAreaElement
-      ) return;
+      )
+        return;
 
       if (
         event.target instanceof HTMLElement &&
         event.target.closest('[data-enter-skip="true"]')
-      ) return;
+      )
+        return;
 
       if (currentScreen === "summary") {
         handleFinish();
@@ -80,15 +88,11 @@ export default function OnboardingFlow({ onComplete }: Props) {
     <div className="fixed inset-0 z-[99999] bg-white font-poppins flex items-center justify-center overflow-hidden font-semibold">
       <BackgroundCanvas />
       <AnimatePresence mode="wait">
-        {currentScreen === "name" && (
-          <NameScreen key="name" onNext={advance} />
-        )}
+        {currentScreen === "name" && <NameScreen key="name" onNext={advance} />}
         {currentScreen === "content" && (
           <ContentScreen key="content" onNext={advance} />
         )}
-        {currentScreen === "pain" && (
-          <PainScreen key="pain" onNext={advance} />
-        )}
+        {currentScreen === "pain" && <PainScreen key="pain" onNext={advance} />}
         {currentScreen === "loading" && (
           <LoadingScreen key="loading" onDone={advance} />
         )}
