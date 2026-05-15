@@ -32,6 +32,12 @@ export default function PlanPageClient() {
     ? (events.find((e) => e.date === selectedDate) ?? null)
     : null;
 
+  // Derive calendar markers from both stored events and task scheduled dates
+  const markedDates = [
+    ...events.map((e) => e.date),
+    ...tasks.flatMap((t) => (t.scheduledDate ? [t.scheduledDate] : [])),
+  ];
+
   if (!mounted) {
     return (
       <div className="flex h-screen" style={{ background: "#FAFAFB" }}>
@@ -70,7 +76,7 @@ export default function PlanPageClient() {
           <div className="flex gap-4 items-start">
             <div className="flex-1 min-w-0">
               <ExecutionCalendar
-                events={events}
+                markedDates={markedDates}
                 selectedDate={selectedDate}
                 onSelectDate={handleDateSelect}
               />
