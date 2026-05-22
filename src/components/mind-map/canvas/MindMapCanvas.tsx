@@ -1,44 +1,45 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
 import {
-  ReactFlow,
-  ReactFlowProvider,
+  addEdge,
   Background,
   BackgroundVariant,
+  type Connection,
   Controls,
+  type Edge,
   MiniMap,
-  useNodesState,
+  type OnConnect,
+  ReactFlow,
+  ReactFlowProvider,
   useEdgesState,
-  addEdge,
-  Node,
-  Edge,
-  OnConnect,
-  Connection,
-  useReactFlow,
+  useNodesState,
   useOnViewportChange,
+  useReactFlow,
 } from "@xyflow/react";
+import { useCallback, useRef, useState } from "react";
 import "@xyflow/react/dist/style.css";
 
+import { getStroke } from "perfect-freehand";
+import { EraserCursor } from "@/components/mind-map/canvas/EraserCursor";
+import MindMapSidePanel from "@/components/mind-map/canvas/MindMapSidePanel";
+import ResizableSplit from "@/components/mind-map/canvas/ResizableSplit";
+import Toolbar from "@/components/mind-map/canvas/Toolbar";
 import {
+  INITIAL_EDGES,
+  INITIAL_NODES,
+} from "@/components/mind-map/constants/initialData";
+import {
+  type Tool,
   ToolProvider,
   useTool,
-  Tool,
 } from "@/components/mind-map/context/ToolContext";
-import { DEFAULT_DIMS } from "@/components/mind-map/nodes/ShapeNode";
-import { useKeyboardShortcuts } from "@/components/mind-map/hooks/useKeyboardShortcuts";
-import { useEraser } from "@/components/mind-map/hooks/useEraser";
+import { EDGE_MARKER, edgeTypes } from "@/components/mind-map/edges/edgeTypes";
 import { useDraw } from "@/components/mind-map/hooks/useDraw";
-import { getStroke } from "perfect-freehand";
+import { useEraser } from "@/components/mind-map/hooks/useEraser";
+import { useKeyboardShortcuts } from "@/components/mind-map/hooks/useKeyboardShortcuts";
 import { getSvgPathFromStroke } from "@/components/mind-map/nodes/DrawingNode";
 import { nodeTypes } from "@/components/mind-map/nodes/nodeTypes";
-import { edgeTypes, EDGE_MARKER } from "@/components/mind-map/edges/edgeTypes";
-import {
-  INITIAL_NODES,
-  INITIAL_EDGES,
-} from "@/components/mind-map/constants/initialData";
-import Toolbar from "@/components/mind-map/canvas/Toolbar";
-import { EraserCursor } from "@/components/mind-map/canvas/EraserCursor";
+import { DEFAULT_DIMS } from "@/components/mind-map/nodes/ShapeNode";
 
 // ─── Cursor map per tool ──────────────────────────────────────────────────────
 
@@ -212,10 +213,11 @@ function CanvasInner() {
         selectionOnDrag={isSelectTool}
         selectNodesOnDrag={false}
         deleteKeyCode={null}
-        fitView
+        // fitView
         fitViewOptions={{ padding: 0.3 }}
+        defaultViewport={{ x: 250, y: 250, zoom: 1 }}
         minZoom={0.1}
-        maxZoom={4}
+        maxZoom={6}
         proOptions={{ hideAttribution: true }}
       >
         <Background
@@ -273,7 +275,7 @@ function ActiveToolBadge() {
 
 function CanvasRoot() {
   return (
-    <div className="w-full h-screen flex flex-col bg-white overflow-hidden">
+    <div className="w-full h-full flex flex-col bg-white overflow-hidden">
       <header className="shrink-0 h-11 border-b border-gray-100 flex items-center px-4 gap-3">
         <span className="text-sm font-semibold text-gray-800 tracking-tight">
           Mind Map
@@ -283,9 +285,16 @@ function CanvasRoot() {
 
       <div className="relative flex-1 overflow-hidden">
         <ReactFlowProvider>
-          <CanvasInner />
+          <ResizableSplit
+            left={<MindMapSidePanel />}
+            right={
+              <>
+                <CanvasInner />
+                <Toolbar />
+              </>
+            }
+          />
         </ReactFlowProvider>
-        <Toolbar />
       </div>
     </div>
   );

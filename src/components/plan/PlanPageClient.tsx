@@ -1,11 +1,11 @@
 "use client";
 
-import { getCalendarEvents, getPlanTasks, savePlanTasks } from "@/utils/plan";
-import type { CalendarEvent, PlanTask } from "@/types/plan";
 import { useEffect, useState } from "react";
-import TaskList from "./TaskList";
-import ExecutionCalendar from "./ExecutionCalendar";
+import type { CalendarEvent, PlanTask } from "@/types/plan";
+import { getCalendarEvents, getPlanTasks, savePlanTasks } from "@/utils/plan";
 import EventDetailCard from "./EventDetailCard";
+import ExecutionCalendar from "./ExecutionCalendar";
+import TaskList from "./TaskList";
 
 export default function PlanPageClient() {
   const [tasks, setTasks] = useState<PlanTask[]>([]);
@@ -40,7 +40,7 @@ export default function PlanPageClient() {
 
   if (!mounted) {
     return (
-      <div className="flex h-screen" style={{ background: "#FAFAFB" }}>
+      <div className="flex h-full" style={{ background: "#FAFAFB" }}>
         <div className="flex-1 flex items-center justify-center">
           <div className="animate-shimmer h-8 w-32 rounded-full" />
         </div>
@@ -50,7 +50,7 @@ export default function PlanPageClient() {
 
   return (
     <div
-      className="flex flex-col h-screen font-[var(--font-poppins)] overflow-hidden"
+      className="flex flex-col h-full font-[var(--font-poppins)] overflow-hidden"
       style={{ background: "#FAFAFB" }}
     >
       {/* Header */}

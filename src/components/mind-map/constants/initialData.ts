@@ -1,69 +1,37 @@
-import type { Node, Edge } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
 import { EDGE_MARKER } from "@/components/mind-map/edges/edgeTypes";
+import {
+  hubNodeStyle,
+  IDEA_ID,
+  IDEA_POS,
+  ideaNodeStyle,
+  MIND_MAP_GROUPS,
+} from "./topics";
 
+// Central idea node + the 4 required hub nodes ringing it.
 export const INITIAL_NODES: Node[] = [
   {
-    id: "demo-1",
+    id: IDEA_ID,
     type: "default",
-    position: { x: 200, y: 180 },
-    data: { label: "Your first idea" },
-    style: {
-      background: "#fff",
-      border: "1px solid #e5e7eb",
-      borderRadius: 10,
-      padding: "10px 16px",
-      fontSize: 14,
-      color: "#111827",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-    },
+    position: IDEA_POS,
+    data: { label: "Your Idea" },
+    style: ideaNodeStyle(),
   },
-  {
-    id: "demo-2",
+  ...MIND_MAP_GROUPS.map<Node>((g) => ({
+    id: g.hubId,
     type: "default",
-    position: { x: 480, y: 100 },
-    data: { label: "Branch A" },
-    style: {
-      background: "#fff",
-      border: "1px solid #e5e7eb",
-      borderRadius: 10,
-      padding: "10px 16px",
-      fontSize: 14,
-      color: "#111827",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-    },
-  },
-  {
-    id: "demo-3",
-    type: "default",
-    position: { x: 480, y: 260 },
-    data: { label: "Branch B" },
-    style: {
-      background: "#fff",
-      border: "1px solid #e5e7eb",
-      borderRadius: 10,
-      padding: "10px 16px",
-      fontSize: 14,
-      color: "#111827",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-    },
-  },
+    position: g.hubPos,
+    data: { label: g.hubLabel },
+    style: hubNodeStyle(g.hubBg),
+  })),
 ];
 
-export const INITIAL_EDGES: Edge[] = [
-  {
-    id: "e1-2",
-    source: "demo-1",
-    target: "demo-2",
-    type: "labeled",
-    data: { arrowEnd: true },
-    markerEnd: EDGE_MARKER,
-  },
-  {
-    id: "e1-3",
-    source: "demo-1",
-    target: "demo-3",
-    type: "labeled",
-    data: { arrowEnd: true },
-    markerEnd: EDGE_MARKER,
-  },
-];
+// Each hub is wired to the central idea node.
+export const INITIAL_EDGES: Edge[] = MIND_MAP_GROUPS.map<Edge>((g) => ({
+  id: `e-idea-${g.hubId}`,
+  source: IDEA_ID,
+  target: g.hubId,
+  type: "labeled",
+  data: { arrowEnd: true },
+  markerEnd: EDGE_MARKER,
+}));

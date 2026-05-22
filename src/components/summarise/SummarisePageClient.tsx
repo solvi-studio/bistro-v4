@@ -1,10 +1,10 @@
 "use client";
 
-import { getSummariseData } from "@/utils/plan";
-import type { SummariseLoadState } from "@/types/summarise";
-import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import type { SummariseLoadState } from "@/types/summarise";
+import { getSummariseData } from "@/utils/plan";
 import ConceptMetaBar from "./ConceptMetaBar";
 import ShotTable from "./ShotTable";
 import SummariseSkeleton from "./SummariseSkeleton";
@@ -21,7 +21,7 @@ export default function SummarisePageClient() {
 
   return (
     <div
-      className="flex flex-col h-screen overflow-hidden"
+      className="flex flex-col h-full overflow-hidden"
       style={{
         background: "#FAFAFB",
         fontFamily: "var(--font-poppins), Poppins, sans-serif",
