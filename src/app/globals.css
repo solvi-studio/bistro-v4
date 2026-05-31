@@ -39,16 +39,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-@keyframes slide-up-in {
-  from { transform: translateY(28px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-@keyframes slide-down-in {
-  from { transform: translateY(-28px); opacity: 0; }
-  to   { transform: translateY(0);     opacity: 1; }
-}
-.animate-slide-up   { animation: slide-up-in   240ms ease-out both; }
-.animate-slide-down { animation: slide-down-in 240ms ease-out both; }
 
 @keyframes shimmer {
   0% {

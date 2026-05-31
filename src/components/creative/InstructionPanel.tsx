@@ -1,12 +1,15 @@
 "use client";
 
+import { gsap } from "gsap";
+import { SplitText } from "gsap/SplitText";
 import {
   Brain,
-  ChevronsLeft,
   ListChecks,
-  Maximize2,
   Workflow,
 } from "lucide-react";
+import { useLayoutEffect, useRef } from "react";
+
+gsap.registerPlugin(SplitText);
 
 interface Slide {
   title: string;
@@ -180,23 +183,23 @@ function SlideMockups({ index }: { index: number }) {
   if (index === 0) {
     return (
       <>
-        <ChatMock />
-        <MiniMindMap />
+        <div className="anim-mockup"><ChatMock /></div>
+        <div className="anim-mockup"><MiniMindMap /></div>
       </>
     );
   }
   if (index === 1) {
     return (
       <>
-        <MiniMindMap />
-        <MiniTable />
+        <div className="anim-mockup"><MiniMindMap /></div>
+        <div className="anim-mockup"><MiniTable /></div>
       </>
     );
   }
   return (
     <>
-      <MiniTaskList />
-      <MiniCalendar />
+      <div className="anim-mockup"><MiniTaskList /></div>
+      <div className="anim-mockup"><MiniCalendar /></div>
     </>
   );
 }
@@ -212,10 +215,56 @@ interface Props {
 export default function InstructionPanel({ active, direction, onToggleCollapse }: Props) {
   const slide = SLIDES[active];
   const Icon = slide.icon;
-  const animClass = direction === "forward" ? "animate-slide-up" : "animate-slide-down";
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const xFrom = direction === "forward" ? 28 : -28;
+
+    // Declared outside context so cleanup closure can reach them.
+    let titleSplit: ReturnType<typeof SplitText.create> | undefined;
+    let body1Split: ReturnType<typeof SplitText.create> | undefined;
+    let body2Split: ReturnType<typeof SplitText.create> | undefined;
+
+    const ctx = gsap.context(() => {
+      const scope = sectionRef.current!;
+      const titleEl  = scope.querySelector<HTMLElement>(".anim-title h3");
+      const body1El  = scope.querySelector<HTMLElement>(".anim-body1");
+      const body2El  = scope.querySelector<HTMLElement>(".anim-body2");
+
+      if (!titleEl || !body1El || !body2El) return;
+
+      // type "chars, words" preserves word spacing when splitting to chars.
+      titleSplit = SplitText.create(titleEl,  { type: "chars, words" });
+      body1Split = SplitText.create(body1El,  { type: "chars, words" });
+      body2Split = SplitText.create(body2El,  { type: "chars, words" });
+
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
+
+      // t=0.0  panel slides in from direction
+      tl.from(".anim-panel", { x: xFrom, autoAlpha: 0, duration: 0.4 })
+        // t=0.2  icon pops in
+        .from(".anim-title svg", { autoAlpha: 0, scale: 0.8, duration: 0.3 }, 0.2)
+        // t=0.3  title chars stream left → right
+        .from(titleSplit.chars, { autoAlpha: 0, x: -10, stagger: 0.02, duration: 0.35 }, 0.3)
+        // t=0.75 body1 chars flow left → right
+        .from(body1Split.chars, { autoAlpha: 0, x: -6, stagger: 0.005, duration: 0.25 }, 0.75)
+        // t=1.2  mockup panels rise up, staggered
+        .from(".anim-mockup", { y: 18, autoAlpha: 0, stagger: 0.28, duration: 0.55 }, 1.2)
+        // t=2.0  body2 chars flow left → right  (~ends 2.95s)
+        .from(body2Split.chars, { autoAlpha: 0, x: -6, stagger: 0.005, duration: 0.25 }, 2.0);
+    }, sectionRef);
+
+    return () => {
+      // Revert SplitText first — restores original DOM before context kills tweens.
+      titleSplit?.revert();
+      body1Split?.revert();
+      body2Split?.revert();
+      ctx.revert();
+    };
+  }, [active, direction]);
 
   return (
-    <section className="flex flex-1 flex-col">
+    <section ref={sectionRef} className="flex flex-1 flex-col">
       <header className="mb-4 flex items-center gap-2 md:mb-5">
         <h2 className="flex-1 text-base font-bold text-gray-800 md:text-lg">Instruction</h2>
         {/* Step dots — visible only on mobile where sidebar is hidden */}
@@ -230,17 +279,16 @@ export default function InstructionPanel({ active, direction, onToggleCollapse }
       </header>
 
       <div
-        key={active}
-        className={`flex flex-col gap-3 rounded-2xl p-4 md:gap-4 md:p-6 ${animClass}`}
+        className="anim-panel flex flex-col gap-3 rounded-2xl p-4 md:gap-4 md:p-6"
         style={{ backgroundColor: slide.panelBg }}
       >
-        <div className="flex items-center gap-2">
+        <div className="anim-title flex items-center gap-2">
           <Icon size={18} className="shrink-0 text-gray-800 md:size-5" strokeWidth={2.2} />
           <h3 className="text-lg font-bold text-gray-800 md:text-2xl">{slide.title}</h3>
         </div>
-        <p className="text-base leading-relaxed text-gray-600 md:text-xl">{slide.body1}</p>
+        <p className="anim-body1 text-base leading-relaxed text-gray-600 md:text-xl">{slide.body1}</p>
         <SlideMockups index={active} />
-        <p className="text-base leading-relaxed text-gray-600 md:text-xl">{slide.body2}</p>
+        <p className="anim-body2 text-base leading-relaxed text-gray-600 md:text-xl">{slide.body2}</p>
       </div>
     </section>
   );
