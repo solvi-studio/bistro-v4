@@ -207,7 +207,6 @@ export function useKeyboardShortcuts(deps: ShortcutDeps) {
     reg("n", () => setActiveTool("shape"));
     reg("c", () => setActiveTool("connector"));
     reg("e", () => setActiveTool("eraser"));
-    reg("p", () => setActiveTool("draw"));
 
     const deleteSelected = () =>
       deleteElements({

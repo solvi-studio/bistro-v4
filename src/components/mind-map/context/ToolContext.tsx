@@ -15,8 +15,7 @@ export type Tool =
   | "textbox"
   | "shape"
   | "connector"
-  | "eraser"
-  | "draw";
+  | "eraser";
 
 type ToolContextValue = {
   activeTool: Tool;

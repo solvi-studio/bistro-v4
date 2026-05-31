@@ -16,10 +16,11 @@ import {
   useOnViewportChange,
   useReactFlow,
 } from "@xyflow/react";
+import { Bot, Download } from "lucide-react";
+import { exportMindMapForAI, exportMindMapJSON } from "@/utils/mindmap-export";
 import { useCallback, useRef, useState } from "react";
 import "@xyflow/react/dist/style.css";
 
-import { getStroke } from "perfect-freehand";
 import { EraserCursor } from "@/components/mind-map/canvas/EraserCursor";
 import MindMapSidePanel from "@/components/mind-map/canvas/MindMapSidePanel";
 import ResizableSplit from "@/components/mind-map/canvas/ResizableSplit";
@@ -34,10 +35,8 @@ import {
   useTool,
 } from "@/components/mind-map/context/ToolContext";
 import { EDGE_MARKER, edgeTypes } from "@/components/mind-map/edges/edgeTypes";
-import { useDraw } from "@/components/mind-map/hooks/useDraw";
 import { useEraser } from "@/components/mind-map/hooks/useEraser";
 import { useKeyboardShortcuts } from "@/components/mind-map/hooks/useKeyboardShortcuts";
-import { getSvgPathFromStroke } from "@/components/mind-map/nodes/DrawingNode";
 import { nodeTypes } from "@/components/mind-map/nodes/nodeTypes";
 import { DEFAULT_DIMS } from "@/components/mind-map/nodes/ShapeNode";
 
@@ -50,15 +49,20 @@ const CURSOR: Record<Tool, string> = {
   shape: "crosshair",
   connector: "crosshair",
   eraser: "none",
-  draw: "crosshair",
 };
 
 // ─── Inner canvas (must be inside ReactFlowProvider) ─────────────────────────
 
 function CanvasInner() {
   const { activeTool, setActiveTool, pendingShape } = useTool();
-  const { screenToFlowPosition, deleteElements, getNodes, getEdges, addNodes } =
-    useReactFlow();
+  const {
+    screenToFlowPosition,
+    deleteElements,
+    getNodes,
+    getEdges,
+    addNodes,
+    getViewport,
+  } = useReactFlow();
 
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
@@ -66,11 +70,6 @@ function CanvasInner() {
   const isSelectTool = activeTool === "select";
 
   const { isEraserActive, eraserPos, handlers: eraserHandlers } = useEraser();
-  const {
-    isDrawActive,
-    livePoints,
-    onPointerDown: drawPointerDown,
-  } = useDraw();
 
   // ── Minimap visibility — show while panning, hide 1.5s after stopping ────
   const [showMinimap, setShowMinimap] = useState(false);
@@ -171,29 +170,33 @@ function CanvasInner() {
     [activeTool, pendingShape, screenToFlowPosition, addNodes, setActiveTool],
   );
 
-  const livePath =
-    livePoints.length > 1
-      ? getSvgPathFromStroke(
-          getStroke(livePoints, {
-            size: 4,
-            thinning: 0.5,
-            smoothing: 0.5,
-            streamline: 0.5,
-          }),
-        )
-      : "";
-
   return (
     <div
       className="w-full h-full relative"
       style={{ cursor: isEraserActive ? "none" : CURSOR[activeTool] }}
-      onPointerDown={(e) => {
-        eraserHandlers.onPointerDown();
-        drawPointerDown(e);
-      }}
+      onPointerDown={eraserHandlers.onPointerDown}
       onPointerUp={eraserHandlers.onPointerUp}
       onPointerLeave={eraserHandlers.onPointerLeave}
     >
+      <div className="absolute top-3 right-3 z-10 flex gap-2 pointer-events-auto">
+        <button
+          type="button"
+          title="Export JSON"
+          onClick={() => exportMindMapJSON(nodes, edges, getViewport())}
+          className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+        >
+          <Download size={14} /> Export
+        </button>
+        <button
+          type="button"
+          title="Export for AI analysis"
+          onClick={() => exportMindMapForAI(nodes, edges)}
+          className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+        >
+          <Bot size={14} /> AI Export
+        </button>
+      </div>
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -244,12 +247,6 @@ function CanvasInner() {
       </ReactFlow>
 
       <EraserCursor isActive={isEraserActive} pos={eraserPos} />
-
-      {isDrawActive && livePath && (
-        <svg className="pointer-events-none fixed inset-0 w-screen h-screen z-[9998]">
-          <path d={livePath} fill="#1a1a1a" />
-        </svg>
-      )}
     </div>
   );
 }
@@ -264,7 +261,6 @@ function ActiveToolBadge() {
     textbox: "Text Box",
     connector: "Connector",
     eraser: "Eraser",
-    draw: "Freehand Draw",
   };
   return (
     <span className="text-xs text-gray-400 font-medium">

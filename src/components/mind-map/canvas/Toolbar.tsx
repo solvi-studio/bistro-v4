@@ -7,7 +7,6 @@ import {
   Shapes,
   Spline,
   Eraser,
-  PenLine,
 } from "lucide-react";
 import { useTool, Tool } from "@/components/mind-map/context/ToolContext";
 import {
@@ -53,12 +52,6 @@ const TOOLS: ToolDef[] = [
     label: "Eraser",
     shortcut: "E",
     icon: <Eraser size={18} />,
-  },
-  {
-    tool: "draw",
-    label: "Freehand Draw",
-    shortcut: "P",
-    icon: <PenLine size={18} />,
   },
 ];
 
