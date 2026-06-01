@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { isOnboardingDone } from "@/utils/onboarding";
@@ -21,24 +21,25 @@ const BackgroundCanvas = dynamic(
 
 export default function Home() {
   const { isSignedIn, isLoaded } = useAuth();
+  const { user, isLoaded: isUserLoaded } = useUser();
   const router = useRouter();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || !isUserLoaded) return;
 
     if (!isSignedIn) {
       setReady(true);
       return;
     }
 
-    if (!isOnboardingDone()) {
+    if (!isOnboardingDone(user?.unsafeMetadata)) {
       router.replace("/onboarding");
       return;
     }
 
     router.replace("/canvas");
-  }, [router, isSignedIn, isLoaded]);
+  }, [router, isSignedIn, isLoaded, user, isUserLoaded]);
 
   if (!ready) {
     return (
