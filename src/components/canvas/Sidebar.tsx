@@ -7,6 +7,7 @@ import {
   MessageCircle,
   NotebookPen,
 } from "lucide-react";
+import { UserAvatar, UserButton, UserProfile } from "@clerk/nextjs";
 
 const TOP_NAV = [
   { Icon: Home, label: "Home", active: true },
@@ -46,13 +47,14 @@ export default function Sidebar() {
           <Icon className="h-6 w-6 text-[#3b7cf4]" strokeWidth={2} />
         </button>
       ))}
-      <Image
+      {/* <Image
         src="/icon/mascot.png"
         alt="Avatar"
         width={36}
         height={36}
         className="mt-2 rounded-full"
-      />
+      /> */}
+      <UserButton />
     </aside>
   );
 }

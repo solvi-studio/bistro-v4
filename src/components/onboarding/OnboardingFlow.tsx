@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { AnimatePresence } from "framer-motion";
 import { useCallback, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
 import {
   useOnboardingStore,
   selectCanAdvance,
@@ -25,6 +26,7 @@ const BackgroundCanvas = dynamic(() => import("./t3-empty/backgroundCanvas"), {
 type Props = { onComplete: () => void };
 
 export default function OnboardingFlow({ onComplete }: Props) {
+  const { user } = useUser();
   const {
     currentScreen,
     advance,
@@ -33,22 +35,19 @@ export default function OnboardingFlow({ onComplete }: Props) {
     contentTypes,
     painPoints,
     tiktokUrl,
-    markComplete,
   } = useOnboardingStore();
 
   const canAdvance = useOnboardingStore(selectCanAdvance);
   const canRetreat = useOnboardingStore(selectCanRetreat);
 
-  const handleFinish = useCallback(() => {
-    markOnboardingDone({
-      name,
-      dataLane: contentTypes,
-      challenge: painPoints,
-      tiktokUrl,
-    });
-    markComplete();
+  const handleFinish = useCallback(async () => {
+    if (!user) return;
+    await markOnboardingDone(
+      async (metadata) => { await user.update({ unsafeMetadata: { ...user.unsafeMetadata, ...metadata } }); },
+      { name, dataLane: contentTypes, challenge: painPoints, tiktokUrl },
+    );
     onComplete();
-  }, [contentTypes, name, onComplete, painPoints, tiktokUrl, markComplete]);
+  }, [contentTypes, name, onComplete, painPoints, tiktokUrl, user]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

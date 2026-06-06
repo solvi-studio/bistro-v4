@@ -1,9 +1,7 @@
 import { z } from "zod";
 
-// Schema version for migrations
 export const SCHEMA_VERSION = 1;
 
-// Zod schemas for validation
 export const OnboardingSchema = z.object({
   name: z.string().min(1, "Name is required").max(50, "Name too long"),
   dataLane: z.array(z.string()).min(1, "At least one content lane required"),
@@ -20,31 +18,25 @@ export type TutorialStep = {
   id: number;
   title: string;
   content: string;
-  imageAsset?: string; // Path to tutorial image asset
-  stepType?: "standard" | "tiktok-flow" | "profile-guide"; // Type of tutorial step
-  subStep?: string; // For multi-part steps like 3.1, 3.2, 3.3
+  imageAsset?: string;
+  stepType?: "standard" | "tiktok-flow" | "profile-guide";
+  subStep?: string;
 };
 
 export type TutorialData = {
   steps: TutorialStep[];
   currentStep: number;
   completed: boolean;
-  modalViewed?: boolean; // Existing field for backward compatibility
-  tikTokPhaseComplete?: boolean; // Track completion of TikTok tutorial phase
-  profileNavigationState?: "initial" | "on-tiktok" | "returned-to-profile"; // Track profile navigation flow
-  currentTutorialImage?: string; // Current tutorial image being displayed
-  likesEnabled?: boolean; // Track if thumbnail liking is enabled
+  modalViewed?: boolean;
+  tikTokPhaseComplete?: boolean;
+  profileNavigationState?: "initial" | "on-tiktok" | "returned-to-profile";
+  currentTutorialImage?: string;
+  likesEnabled?: boolean;
 };
 
-export const ONBOARDING_DATA_KEY = "bistro_onboarding_data";
-export const ONBOARDING_DONE_KEY = "bistro_onboarding_done";
 export const ONBOARDING_COOKIE_KEY = "bistro_onboarding_done";
 
 export const TUT_DATA_KEY = "bistro_tutorial_data";
-
-function hasBrowserStorage(): boolean {
-  return typeof window !== "undefined" && typeof localStorage !== "undefined";
-}
 
 export const LANE_OPTIONS = [
   "Educational bites",
@@ -53,79 +45,43 @@ export const LANE_OPTIONS = [
   "Others",
 ];
 
-export function getInitialOnboardingData(): OnboardingData {
-  if (!hasBrowserStorage()) {
-    return { name: "", dataLane: [], challenge: "" };
-  }
-
-  const stored = localStorage.getItem(ONBOARDING_DATA_KEY);
-  if (!stored) {
-    return { name: "", dataLane: [], challenge: "" };
-  }
-
-  try {
-    const parsed = JSON.parse(stored) as Record<string, unknown>;
-
-    // Handle schema migrations
-    const storedVersion = parsed.__schemaVersion as number | undefined;
-    if (storedVersion !== SCHEMA_VERSION) {
-      console.log(
-        `Schema version mismatch: stored=${storedVersion}, current=${SCHEMA_VERSION}`,
-      );
-      // For now, return defaults on version mismatch
-      // Future: implement migrateSchema(parsed, storedVersion)
-      return { name: "", dataLane: [], challenge: "" };
-    }
-
-    // Validate with zod
-    const result = OnboardingSchema.safeParse(parsed);
-    if (result.success) {
-      return result.data;
-    }
-
-    console.error("Onboarding data validation failed:", result.error);
-    return { name: "", dataLane: [], challenge: "" };
-  } catch (error) {
-    console.error("Failed to parse onboarding data from storage", error);
-    return { name: "", dataLane: [], challenge: "" };
-  }
+export interface ClerkUnsafeMetadata {
+  onboardingComplete?: boolean;
+  onboardingData?: OnboardingData;
 }
 
-export function saveOnboardingData(data: OnboardingData) {
-  if (!hasBrowserStorage()) {
-    return;
-  }
+export function isOnboardingDone(
+  unsafeMetadata: Record<string, unknown> | undefined,
+): boolean {
+  return unsafeMetadata?.onboardingComplete === true;
+}
 
-  // Validate data before saving
+export async function markOnboardingDone(
+  update: (metadata: Record<string, unknown>) => Promise<void>,
+  data: OnboardingData,
+) {
   const validated = OnboardingSchema.safeParse(data);
   if (!validated.success) {
     console.error("Invalid onboarding data:", validated.error);
     return;
   }
 
-  // Include schema version for future migrations
   const versioned = { ...data, __schemaVersion: SCHEMA_VERSION };
-  localStorage.setItem(ONBOARDING_DATA_KEY, JSON.stringify(versioned));
+  await update({
+    onboardingComplete: true,
+    onboardingData: versioned,
+  });
 }
 
-export function isOnboardingDone(): boolean {
-  if (!hasBrowserStorage()) {
-    return false;
-  }
-
-  return localStorage.getItem(ONBOARDING_DONE_KEY) === "true";
+export async function resetOnboardingState(
+  update: (metadata: Record<string, unknown>) => Promise<void>,
+) {
+  await update({
+    onboardingComplete: false,
+    onboardingData: null,
+  });
 }
 
-export function markOnboardingDone(data: OnboardingData) {
-  if (!hasBrowserStorage()) {
-    return;
-  }
-
-  localStorage.setItem(ONBOARDING_DONE_KEY, "true");
-  saveOnboardingData(data);
-}
-
-// Helper to validate onboarding data
 export function validateOnboardingData(data: unknown): OnboardingData | null {
   const result = OnboardingSchema.safeParse(data);
   if (result.success) {
@@ -133,16 +89,6 @@ export function validateOnboardingData(data: unknown): OnboardingData | null {
   }
   console.error("Validation failed:", result.error);
   return null;
-}
-
-export function resetOnboardingState() {
-  if (!hasBrowserStorage()) {
-    return;
-  }
-
-  localStorage.removeItem(ONBOARDING_DONE_KEY);
-  localStorage.removeItem(ONBOARDING_DATA_KEY);
-  localStorage.removeItem(TUT_DATA_KEY);
 }
 
 const DEFAULT_STEPS: TutorialStep[] = [
@@ -204,7 +150,7 @@ const ALLOWED_STEP_IDS = [1, 2, 5, 6, 7, 8, 9];
 const ALLOWED_STEP_SET = new Set(ALLOWED_STEP_IDS);
 
 export function getInitialTutorialData(): TutorialData {
-  if (!hasBrowserStorage()) {
+  if (typeof window === "undefined" || typeof localStorage === "undefined") {
     return {
       steps: DEFAULT_STEPS,
       currentStep: 1,

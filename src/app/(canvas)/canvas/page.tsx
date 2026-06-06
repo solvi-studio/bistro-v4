@@ -16,7 +16,7 @@ const CARDS = [
     counter: "2/2",
     description:
       "This is your space where you can brainstorm your next cool ideas",
-    nextHref: "#",
+    nextHref: "/mind-map",
   },
 ] as const;
 
