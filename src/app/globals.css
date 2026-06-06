@@ -39,6 +39,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -52,4 +53,11 @@ body {
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+}
+
+/* Mind-map: node currently under a dragged node (hover-to-connect target). */
+.react-flow__node.mm-drop-target {
+  outline: 2px dashed var(--color-primary);
+  outline-offset: 3px;
+  border-radius: 14px;
 }

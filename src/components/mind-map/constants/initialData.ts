@@ -16,6 +16,8 @@ export const INITIAL_NODES: Node[] = [
     position: IDEA_POS,
     data: { label: "Your Idea" },
     style: ideaNodeStyle(),
+    // Anchor node — movable, but cannot be deleted.
+    deletable: false,
   },
   ...MIND_MAP_GROUPS.map<Node>((g) => ({
     id: g.hubId,
@@ -23,6 +25,8 @@ export const INITIAL_NODES: Node[] = [
     position: g.hubPos,
     data: { label: g.hubLabel },
     style: hubNodeStyle(g.hubBg),
+    // Anchor node — movable, but cannot be deleted.
+    deletable: false,
   })),
 ];
 

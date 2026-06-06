@@ -2,10 +2,10 @@
 
 import {
   createContext,
+  type ReactNode,
+  useCallback,
   useContext,
   useState,
-  useCallback,
-  ReactNode,
 } from "react";
 import type { ShapeType } from "@/components/mind-map/nodes/ShapeNode";
 
@@ -16,7 +16,7 @@ export type Tool =
   | "shape"
   | "connector"
   | "eraser"
-  | "draw";
+  | "video";
 
 type ToolContextValue = {
   activeTool: Tool;

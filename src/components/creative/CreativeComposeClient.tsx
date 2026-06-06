@@ -32,16 +32,21 @@ export default function CreativeComposeClient() {
   }
 
   return (
-    <div className="flex h-full">
-      {!collapsed && <CreativeHelperSidebar />}
+    <div className="flex h-full flex-col md:flex-row">
+      {!collapsed && (
+        <div className="hidden md:flex">
+          <CreativeHelperSidebar />
+        </div>
+      )}
 
-      <div className="flex-1 overflow-y-auto p-9">
+      <div className="flex-1 overflow-y-auto p-4 md:p-9">
         <CraftScriptPanel
           draft={draft}
           onChange={handleChange}
           onSubmit={handleSubmit}
           canSubmit={canSubmit}
           onToggleCollapse={() => setCollapsed((c) => !c)}
+          onBack={() => router.back()}
         />
       </div>
     </div>

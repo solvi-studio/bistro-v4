@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronsLeft, Maximize2 } from "lucide-react";
+import { ArrowLeft, ChevronsLeft, Maximize2 } from "lucide-react";
 import type { ScriptDraft } from "@/utils/creative";
 
 const QUESTIONS: { key: keyof ScriptDraft; label: string }[] = [
@@ -15,6 +15,7 @@ interface Props {
   onSubmit: () => void;
   canSubmit: boolean;
   onToggleCollapse: () => void;
+  onBack: () => void;
 }
 
 export default function CraftScriptPanel({
@@ -23,32 +24,43 @@ export default function CraftScriptPanel({
   onSubmit,
   canSubmit,
   onToggleCollapse,
+  onBack,
 }: Props) {
   return (
     <section className="flex flex-1 flex-col">
-      <header className="mb-6 flex items-center gap-2">
+      <header className="mb-4 flex items-center gap-2 md:mb-6">
+        {/* Mobile: back arrow */}
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="Go back"
+          className="grid h-9 w-9 place-items-center rounded-xl text-gray-500 transition-colors hover:bg-gray-100 md:hidden"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        {/* Desktop: collapse */}
         <button
           type="button"
           onClick={onToggleCollapse}
           aria-label="Collapse helper"
-          className="grid h-7 w-7 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100"
+          className="hidden h-7 w-7 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 md:grid"
         >
           <ChevronsLeft size={18} />
         </button>
-        <h2 className="flex-1 text-lg font-bold text-gray-800">
+        <h2 className="flex-1 text-base font-bold text-gray-800 md:text-lg">
           Craft Your Script
         </h2>
         <button
           type="button"
           onClick={onToggleCollapse}
           aria-label="Expand panel"
-          className="grid h-7 w-7 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100"
+          className="hidden h-7 w-7 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 md:grid"
         >
           <Maximize2 size={15} />
         </button>
       </header>
 
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4 md:gap-6">
         {QUESTIONS.map((q) => (
           <div key={q.key}>
             <label
@@ -68,12 +80,12 @@ export default function CraftScriptPanel({
         ))}
       </div>
 
-      <div className="mt-8 flex justify-center">
+      <div className="mt-6 flex justify-center md:mt-8">
         <button
           type="button"
           onClick={onSubmit}
           disabled={!canSubmit}
-          className="rounded-full bg-[var(--color-primary)] px-8 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+          className="min-h-[44px] rounded-full bg-[var(--color-primary)] px-8 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40 md:py-3"
         >
           Let's go!
         </button>

@@ -27,11 +27,11 @@ export default function CreativeSpacesClient() {
   }
 
   return (
-    <div className="px-10 py-9">
-      <h1 className="text-[30px] font-bold text-gray-900">Rita's Canvas</h1>
+    <div className="px-4 py-6 md:px-10 md:py-9">
+      <h1 className="text-2xl font-bold text-gray-900 md:text-[30px]">Rita's Canvas</h1>
       <p className="mt-1 text-sm text-gray-400">Recent Creative Ideas</p>
 
-      <div className="mt-7 flex flex-wrap gap-6">
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-6 md:mt-7">
         <CreateIdeaCard onClick={handleStartNewPage} />
         {mounted &&
           scripts.map((script) => <IdeaCard key={script.id} script={script} />)}

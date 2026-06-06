@@ -40,7 +40,7 @@ export default function CreativeHelperSidebar({
 
   if (collapsed) {
     return (
-      <aside className="flex h-full w-16 shrink-0 flex-col items-center gap-3 border-r border-gray-100 bg-white py-4">
+      <aside className="flex h-full w-36 shrink-0 flex-col items-center gap-3 border-r border-gray-100 bg-white py-4">
         <button
           type="button"
           onClick={() => setCollapsed(false)}
@@ -63,7 +63,7 @@ export default function CreativeHelperSidebar({
   }
 
   return (
-    <aside className="flex h-full w-[300px] shrink-0 flex-col gap-6 overflow-y-auto border-r border-gray-100 bg-white p-6 font-[var(--font-poppins)]">
+    <aside className="flex h-full w-[30vw] shrink-0 flex-col gap-6 overflow-y-auto border-r border-gray-100 bg-white p-6 font-[var(--font-poppins)]">
       <div className="flex items-center gap-2">
         <h2 className="flex-1 text-lg font-bold text-gray-800">
           Your Creative Helper
@@ -78,7 +78,11 @@ export default function CreativeHelperSidebar({
         </button>
       </div>
 
-      <CreativePillList active={activeIndex} onSelect={onSelect} />
+      <div className="mt-[15vh]">
+        <CreativePillList active={activeIndex} onSelect={onSelect} />
+      </div>
+
+
 
       {showReminder && <CreativeFlowReminder />}
 

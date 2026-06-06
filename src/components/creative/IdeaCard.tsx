@@ -19,7 +19,7 @@ export default function IdeaCard({ script }: Props) {
   return (
     <button
       type="button"
-      className="flex h-[215px] w-[225px] flex-col rounded-[22px] p-6 text-left transition-transform hover:-translate-y-1"
+      className="flex aspect-square w-full flex-col rounded-[22px] p-5 text-left transition-transform hover:-translate-y-1 sm:aspect-auto sm:h-[215px] sm:w-[225px] sm:p-6"
       style={{ backgroundColor: bg }}
     >
       <span className="text-2xl">{script.emoji ?? "✨"}</span>

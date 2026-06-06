@@ -1,12 +1,15 @@
 "use client";
 
+import { gsap } from "gsap";
+import { SplitText } from "gsap/SplitText";
 import {
   Brain,
-  ChevronsLeft,
   ListChecks,
-  Maximize2,
   Workflow,
 } from "lucide-react";
+import { useLayoutEffect, useRef } from "react";
+
+gsap.registerPlugin(SplitText);
 
 interface Slide {
   title: string;
@@ -62,15 +65,15 @@ function MiniMindMap() {
           OOTD
         </span>
         <span className="text-gray-400">→</span>
-        <span className="rounded-lg bg-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700">
+        <span className="rounded-lg bg-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-700 md:text-[20px]">
           Clothing
         </span>
       </div>
       <div className="ml-16 mt-2 flex gap-2">
-        <span className="rounded-lg bg-[#dde6f6] px-2.5 py-1 text-[11px] font-medium text-gray-700">
+        <span className="rounded-lg bg-[#dde6f6] px-2.5 py-1 text-sm font-medium text-gray-700 md:text-[20px]">
           Ons shoes
         </span>
-        <span className="rounded-lg bg-[#dde6f6] px-2.5 py-1 text-[11px] font-medium text-gray-700">
+        <span className="rounded-lg bg-[#dde6f6] px-2.5 py-1 text-sm font-medium text-gray-700 md:text-[20px]">
           Gymshark
         </span>
       </div>
@@ -83,12 +86,12 @@ function ChatMock() {
     <div className="rounded-xl bg-white p-4">
       <div className="flex gap-2">
         <span className="h-6 w-6 shrink-0 rounded-full bg-[#8bb89a]" />
-        <span className="rounded-2xl rounded-tl-sm bg-gray-100 px-3 py-2 text-[11px] text-gray-600">
+        <span className="rounded-2xl rounded-tl-sm bg-gray-100 px-3 py-2 text-xs text-gray-600 md:text-[20px]">
           What's your overarching theme for this story?
         </span>
       </div>
       <div className="mt-2 flex justify-end">
-        <span className="max-w-[80%] rounded-2xl rounded-tr-sm bg-[#dde6f6] px-3 py-2 text-[11px] text-gray-700">
+        <span className="max-w-[80%] rounded-2xl rounded-tr-sm bg-[#dde6f6] px-3 py-2 text-xs text-gray-700 md:text-[20px]">
           Showing my OOTD when hustling to go network with other runners to
           prepare for Nike Half marathon competition…
         </span>
@@ -166,7 +169,7 @@ function MiniCalendar() {
           </div>
         ))}
       </div>
-      <div className="w-24 rounded-lg bg-[#dde6f6] p-2">
+      <div className="w-20 rounded-lg bg-[#dde6f6] p-2">
         <p className="text-[9px] font-bold text-gray-700">Reminder</p>
         <p className="mt-1 text-[8px] leading-tight text-gray-500">
           Today's the day for editing your Blue Mountains content
@@ -180,23 +183,23 @@ function SlideMockups({ index }: { index: number }) {
   if (index === 0) {
     return (
       <>
-        <ChatMock />
-        <MiniMindMap />
+        <div className="anim-mockup"><ChatMock /></div>
+        <div className="anim-mockup"><MiniMindMap /></div>
       </>
     );
   }
   if (index === 1) {
     return (
       <>
-        <MiniMindMap />
-        <MiniTable />
+        <div className="anim-mockup"><MiniMindMap /></div>
+        <div className="anim-mockup"><MiniTable /></div>
       </>
     );
   }
   return (
     <>
-      <MiniTaskList />
-      <MiniCalendar />
+      <div className="anim-mockup"><MiniTaskList /></div>
+      <div className="anim-mockup"><MiniCalendar /></div>
     </>
   );
 }
@@ -205,46 +208,87 @@ function SlideMockups({ index }: { index: number }) {
 
 interface Props {
   active: number;
+  direction: "forward" | "back";
   onToggleCollapse: () => void;
 }
 
-export default function InstructionPanel({ active, onToggleCollapse }: Props) {
+export default function InstructionPanel({ active, direction, onToggleCollapse }: Props) {
   const slide = SLIDES[active];
   const Icon = slide.icon;
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const xFrom = direction === "forward" ? 28 : -28;
+
+    // Declared outside context so cleanup closure can reach them.
+    let titleSplit: ReturnType<typeof SplitText.create> | undefined;
+    let body1Split: ReturnType<typeof SplitText.create> | undefined;
+    let body2Split: ReturnType<typeof SplitText.create> | undefined;
+
+    const ctx = gsap.context(() => {
+      const scope = sectionRef.current!;
+      const titleEl  = scope.querySelector<HTMLElement>(".anim-title h3");
+      const body1El  = scope.querySelector<HTMLElement>(".anim-body1");
+      const body2El  = scope.querySelector<HTMLElement>(".anim-body2");
+
+      if (!titleEl || !body1El || !body2El) return;
+
+      // type "chars, words" preserves word spacing when splitting to chars.
+      titleSplit = SplitText.create(titleEl,  { type: "chars, words" });
+      body1Split = SplitText.create(body1El,  { type: "chars, words" });
+      body2Split = SplitText.create(body2El,  { type: "chars, words" });
+
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
+
+      // t=0.0  panel slides in from direction
+      tl.from(".anim-panel", { x: xFrom, autoAlpha: 0, duration: 0.4 })
+        // t=0.2  icon pops in
+        .from(".anim-title svg", { autoAlpha: 0, scale: 0.8, duration: 0.3 }, 0.2)
+        // t=0.3  title chars stream left → right
+        .from(titleSplit.chars, { autoAlpha: 0, x: -10, stagger: 0.02, duration: 0.35 }, 0.3)
+        // t=0.75 body1 chars flow left → right
+        .from(body1Split.chars, { autoAlpha: 0, x: -6, stagger: 0.005, duration: 0.25 }, 0.75)
+        // t=1.2  mockup panels rise up, staggered
+        .from(".anim-mockup", { y: 18, autoAlpha: 0, stagger: 0.28, duration: 0.55 }, 1.2)
+        // t=2.0  body2 chars flow left → right  (~ends 2.95s)
+        .from(body2Split.chars, { autoAlpha: 0, x: -6, stagger: 0.005, duration: 0.25 }, 2.0);
+    }, sectionRef);
+
+    return () => {
+      // Revert SplitText first — restores original DOM before context kills tweens.
+      titleSplit?.revert();
+      body1Split?.revert();
+      body2Split?.revert();
+      ctx.revert();
+    };
+  }, [active, direction]);
 
   return (
-    <section className="flex flex-1 flex-col">
-      <header className="mb-5 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          aria-label="Collapse helper"
-          className="grid h-7 w-7 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100"
-        >
-          <ChevronsLeft size={18} />
-        </button>
-        <h2 className="flex-1 text-lg font-bold text-gray-800">Instruction</h2>
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          aria-label="Expand panel"
-          className="grid h-7 w-7 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100"
-        >
-          <Maximize2 size={15} />
-        </button>
+    <section ref={sectionRef} className="flex flex-1 flex-col">
+      <header className="mb-4 flex items-center gap-2 md:mb-5">
+        <h2 className="flex-1 text-base font-bold text-gray-800 md:text-lg">Instruction</h2>
+        {/* Step dots — visible only on mobile where sidebar is hidden */}
+        <div className="flex gap-1.5 md:hidden">
+          {SLIDES.map((_, i) => (
+            <span
+              key={`dot-${i}`}
+              className={`h-2 w-2 rounded-full transition-colors ${i === active ? "bg-[var(--color-primary)]" : "bg-gray-300"}`}
+            />
+          ))}
+        </div>
       </header>
 
       <div
-        className="flex flex-col gap-4 rounded-2xl p-6"
+        className="anim-panel flex flex-col gap-3 rounded-2xl p-4 md:gap-4 md:p-6"
         style={{ backgroundColor: slide.panelBg }}
       >
-        <div className="flex items-center gap-2">
-          <Icon size={20} className="text-gray-800" strokeWidth={2.2} />
-          <h3 className="text-base font-bold text-gray-800">{slide.title}</h3>
+        <div className="anim-title flex items-center gap-2">
+          <Icon size={18} className="shrink-0 text-gray-800 md:size-5" strokeWidth={2.2} />
+          <h3 className="text-lg font-bold text-gray-800 md:text-2xl">{slide.title}</h3>
         </div>
-        <p className="text-xs leading-relaxed text-gray-600">{slide.body1}</p>
+        <p className="anim-body1 text-base leading-relaxed text-gray-600 md:text-xl">{slide.body1}</p>
         <SlideMockups index={active} />
-        <p className="text-xs leading-relaxed text-gray-600">{slide.body2}</p>
+        <p className="anim-body2 text-base leading-relaxed text-gray-600 md:text-xl">{slide.body2}</p>
       </div>
     </section>
   );
