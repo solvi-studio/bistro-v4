@@ -1,17 +1,18 @@
 "use client";
 
 import {
+  Clapperboard,
+  Eraser,
   MousePointer2,
-  StickyNote,
-  Type,
   Shapes,
   Spline,
-  Eraser,
+  StickyNote,
+  Type,
 } from "lucide-react";
-import { useTool, Tool } from "@/components/mind-map/context/ToolContext";
+import { type Tool, useTool } from "@/components/mind-map/context/ToolContext";
 import {
-  SHAPE_TYPES,
   SHAPE_ICONS,
+  SHAPE_TYPES,
 } from "@/components/mind-map/nodes/ShapeNode";
 
 type ToolDef = {
@@ -52,6 +53,12 @@ const TOOLS: ToolDef[] = [
     label: "Eraser",
     shortcut: "E",
     icon: <Eraser size={18} />,
+  },
+  {
+    tool: "video",
+    label: "Storyboard / Video",
+    shortcut: "B",
+    icon: <Clapperboard size={18} />,
   },
 ];
 

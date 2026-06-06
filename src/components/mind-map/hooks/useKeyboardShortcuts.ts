@@ -2,9 +2,10 @@
 
 // https://n1ghtmare.github.io/2022-01-14/implement-a-keyboard-shortcuts-handler-in-typescript/
 
-import { useEffect } from "react";
+import type { Edge, Node } from "@xyflow/react";
 import type { Dispatch, SetStateAction } from "react";
-import type { Node, Edge } from "@xyflow/react";
+import { useEffect } from "react";
+import { ANCHOR_NODE_IDS } from "@/components/mind-map/constants/topics";
 import type { Tool } from "@/components/mind-map/context/ToolContext";
 
 // ─── Trie types ───────────────────────────────────────────────────────────────
@@ -207,10 +208,14 @@ export function useKeyboardShortcuts(deps: ShortcutDeps) {
     reg("n", () => setActiveTool("shape"));
     reg("c", () => setActiveTool("connector"));
     reg("e", () => setActiveTool("eraser"));
+    reg("b", () => setActiveTool("video"));
 
     const deleteSelected = () =>
       deleteElements({
-        nodes: getNodes().filter((n) => n.selected),
+        // Anchor nodes are never removed, even when selected.
+        nodes: getNodes().filter(
+          (n) => n.selected && !ANCHOR_NODE_IDS.has(n.id),
+        ),
         edges: getEdges().filter((e) => e.selected),
       });
 
@@ -219,7 +224,10 @@ export function useKeyboardShortcuts(deps: ShortcutDeps) {
 
     const selectAll = (e: KeyboardEvent) => {
       e.preventDefault();
-      setNodes((ns) => ns.map((n) => ({ ...n, selected: true })));
+      // Skip anchors so a select-all + delete can't remove them.
+      setNodes((ns) =>
+        ns.map((n) => ({ ...n, selected: !ANCHOR_NODE_IDS.has(n.id) })),
+      );
       setEdges((es) => es.map((ev) => ({ ...ev, selected: true })));
     };
 

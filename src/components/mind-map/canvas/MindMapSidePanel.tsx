@@ -50,6 +50,9 @@ export default function MindMapSidePanel() {
   // Which section's "Add Your Own" input is open, and its draft value.
   const [addingKey, setAddingKey] = useState<string | null>(null);
   const [addValue, setAddValue] = useState("");
+  // User-added topics, kept in the panel as selectable chips (per section).
+  // They only land on the mind map when their chip is pressed.
+  const [customItems, setCustomItems] = useState<Record<string, string[]>>({});
 
   function spawnTopic(group: MindMapGroup, label: string) {
     const text = label.trim();
@@ -84,9 +87,14 @@ export default function MindMapSidePanel() {
     });
   }
 
-  function handleAddSubmit(group: MindMapGroup) {
-    if (!addValue.trim()) return;
-    spawnTopic(group, addValue);
+  // Add the typed topic to the section's chip list — does NOT spawn a node.
+  function handleAddSubmit(sectionKey: string) {
+    const text = addValue.trim();
+    if (!text) return;
+    setCustomItems((prev) => ({
+      ...prev,
+      [sectionKey]: [...(prev[sectionKey] ?? []), text],
+    }));
     setAddValue("");
     setAddingKey(null);
   }
@@ -117,21 +125,26 @@ export default function MindMapSidePanel() {
                     </p>
                   )}
 
-                  {section.items.map((item) => (
-                    <button
-                      key={`${sectionKey}-${item}`}
-                      type="button"
-                      onClick={() => spawnTopic(group, item)}
-                      className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-transform hover:-translate-y-0.5"
-                      style={{
-                        backgroundColor: group.leafBg,
-                        color: group.leafText,
-                      }}
-                    >
-                      <GripVertical size={13} className="shrink-0 opacity-50" />
-                      <span className="line-clamp-2">{item}</span>
-                    </button>
-                  ))}
+                  {[...section.items, ...(customItems[sectionKey] ?? [])].map(
+                    (item) => (
+                      <button
+                        key={`${sectionKey}-${item}`}
+                        type="button"
+                        onClick={() => spawnTopic(group, item)}
+                        className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-transform hover:-translate-y-0.5"
+                        style={{
+                          backgroundColor: group.leafBg,
+                          color: group.leafText,
+                        }}
+                      >
+                        <GripVertical
+                          size={13}
+                          className="shrink-0 opacity-50"
+                        />
+                        <span className="line-clamp-2">{item}</span>
+                      </button>
+                    ),
+                  )}
 
                   {section.allowAdd &&
                     (addingKey === sectionKey ? (
@@ -142,7 +155,7 @@ export default function MindMapSidePanel() {
                           value={addValue}
                           onChange={(e) => setAddValue(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter") handleAddSubmit(group);
+                            if (e.key === "Enter") handleAddSubmit(sectionKey);
                             if (e.key === "Escape") setAddingKey(null);
                           }}
                           placeholder="Your own topic…"
@@ -150,7 +163,7 @@ export default function MindMapSidePanel() {
                         />
                         <button
                           type="button"
-                          onClick={() => handleAddSubmit(group)}
+                          onClick={() => handleAddSubmit(sectionKey)}
                           className="shrink-0 rounded-xl bg-[var(--color-primary)] px-3 text-xs font-semibold text-white"
                         >
                           Add

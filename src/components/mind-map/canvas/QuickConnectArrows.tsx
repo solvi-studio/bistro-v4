@@ -1,15 +1,19 @@
 "use client";
 
-import { useCallback } from "react";
 import { useReactFlow } from "@xyflow/react";
 import {
-  ChevronUp,
-  ChevronRight,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
+  ChevronUp,
 } from "lucide-react";
+import { useCallback } from "react";
 import { useTool } from "@/components/mind-map/context/ToolContext";
 import { EDGE_MARKER } from "@/components/mind-map/edges/edgeTypes";
+import {
+  applyColorToNode,
+  getNodeThemeColor,
+} from "@/components/mind-map/utils/nodeColors";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -148,12 +152,21 @@ export default function QuickConnectArrows({
 
       const newId = `${nodeType}-${Date.now()}`;
 
-      addNodes({
+      // New node adopts the color of the node it springs from.
+      const baseNode = {
         id: newId,
         type: nodeType,
         position: { x: source.position.x + dx, y: source.position.y + dy },
         data: { ...defaults.data },
         style: { ...defaults.style },
+      };
+      const colorPatch = applyColorToNode(baseNode, getNodeThemeColor(source));
+
+      addNodes({
+        ...baseNode,
+        ...colorPatch,
+        data: { ...baseNode.data, ...(colorPatch.data ?? {}) },
+        style: { ...baseNode.style, ...(colorPatch.style ?? {}) },
       });
 
       addEdges({

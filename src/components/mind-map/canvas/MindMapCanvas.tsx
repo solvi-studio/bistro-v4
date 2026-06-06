@@ -8,7 +8,9 @@ import {
   Controls,
   type Edge,
   MiniMap,
+  type Node,
   type OnConnect,
+  type OnNodeDrag,
   ReactFlow,
   ReactFlowProvider,
   useEdgesState,
@@ -16,9 +18,19 @@ import {
   useOnViewportChange,
   useReactFlow,
 } from "@xyflow/react";
-import { Bot, Download } from "lucide-react";
-import { exportMindMapForAI, exportMindMapJSON } from "@/utils/mindmap-export";
+import { Bot, Download, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
+import {
+  applyColorToNode,
+  getNodeThemeColor,
+} from "@/components/mind-map/utils/nodeColors";
+import {
+  exportMindMapForAI,
+  exportMindMapGraph,
+  exportMindMapJSON,
+} from "@/utils/mindmap-export";
+import { submitMindMap } from "@/utils/summarise-service";
 import "@xyflow/react/dist/style.css";
 
 import { EraserCursor } from "@/components/mind-map/canvas/EraserCursor";
@@ -49,7 +61,24 @@ const CURSOR: Record<Tool, string> = {
   shape: "crosshair",
   connector: "crosshair",
   eraser: "none",
+  video: "crosshair",
 };
+
+// Class applied to the node currently underneath a dragged node.
+const DROP_TARGET_CLASS = "mm-drop-target";
+
+function setNodeHighlight(nodeId: string | null) {
+  for (const el of document.querySelectorAll(
+    `.react-flow__node.${DROP_TARGET_CLASS}`,
+  )) {
+    el.classList.remove(DROP_TARGET_CLASS);
+  }
+  if (nodeId) {
+    document
+      .querySelector(`.react-flow__node[data-id="${nodeId}"]`)
+      ?.classList.add(DROP_TARGET_CLASS);
+  }
+}
 
 // ─── Inner canvas (must be inside ReactFlowProvider) ─────────────────────────
 
@@ -62,10 +91,15 @@ function CanvasInner() {
     getEdges,
     addNodes,
     getViewport,
+    getIntersectingNodes,
   } = useReactFlow();
+  const router = useRouter();
 
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
+
+  // Id of the node a dragged node is currently hovering over (drop target).
+  const dropTargetRef = useRef<string | null>(null);
 
   const isSelectTool = activeTool === "select";
 
@@ -123,6 +157,84 @@ function CanvasInner() {
     [activeTool, setEdges],
   );
 
+  // ── Hover-to-connect — drag a node onto another to auto-link them ──────────
+  const firstIntersectingId = useCallback(
+    (node: Node): string | null => {
+      const hit = getIntersectingNodes(node, true).find(
+        (n) => n.id !== node.id,
+      );
+      return hit?.id ?? null;
+    },
+    [getIntersectingNodes],
+  );
+
+  const onNodeDrag: OnNodeDrag = useCallback(
+    (_e, node) => {
+      const targetId = firstIntersectingId(node);
+      if (targetId !== dropTargetRef.current) {
+        dropTargetRef.current = targetId;
+        setNodeHighlight(targetId);
+      }
+    },
+    [firstIntersectingId],
+  );
+
+  const onNodeDragStop: OnNodeDrag = useCallback(
+    (_e, node) => {
+      const targetId = dropTargetRef.current;
+      dropTargetRef.current = null;
+      setNodeHighlight(null);
+      if (!targetId) return;
+
+      const target = getNodes().find((n) => n.id === targetId);
+      if (!target) return;
+
+      // Skip if these two are already linked (either direction).
+      const alreadyLinked = getEdges().some(
+        (e) =>
+          (e.source === target.id && e.target === node.id) ||
+          (e.source === node.id && e.target === target.id),
+      );
+      if (!alreadyLinked) {
+        setEdges((eds) =>
+          addEdge(
+            {
+              id: `e-${target.id}-${node.id}`,
+              source: target.id,
+              target: node.id,
+              type: "labeled",
+              data: { arrowEnd: true },
+              markerEnd: EDGE_MARKER,
+            },
+            eds,
+          ),
+        );
+      }
+
+      // Dragged node adopts the color of the node it landed on.
+      const palette = getNodeThemeColor(target);
+      setNodes((ns) =>
+        ns.map((n) => {
+          if (n.id !== node.id) return n;
+          const patch = applyColorToNode(n, palette);
+          return {
+            ...n,
+            ...patch,
+            data: { ...n.data, ...(patch.data ?? {}) },
+            style: { ...n.style, ...(patch.style ?? {}) },
+          };
+        }),
+      );
+    },
+    [getNodes, getEdges, setEdges, setNodes],
+  );
+
+  // ── Finalise — export graph, submit to backend, go to summarise ────────────
+  const handleFinalise = useCallback(() => {
+    submitMindMap(exportMindMapGraph(nodes, edges));
+    router.push("/summarise");
+  }, [nodes, edges, router]);
+
   // ── Pane click — place sticky or textbox ──────────────────────────────────
   const onPaneClick = useCallback(
     (e: React.MouseEvent) => {
@@ -166,6 +278,16 @@ function CanvasInner() {
         });
         setActiveTool("select");
       }
+
+      if (activeTool === "video") {
+        addNodes({
+          id: `videoDrop-${Date.now()}`,
+          type: "videoDrop",
+          position,
+          data: { status: "idle" },
+        });
+        setActiveTool("select");
+      }
     },
     [activeTool, pendingShape, screenToFlowPosition, addNodes, setActiveTool],
   );
@@ -195,6 +317,14 @@ function CanvasInner() {
         >
           <Bot size={14} /> AI Export
         </button>
+        <button
+          type="button"
+          title="Finalise idea and generate summary"
+          onClick={handleFinalise}
+          className="flex items-center gap-1.5 rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[var(--color-primary-hover)]"
+        >
+          <Sparkles size={14} /> Finalise
+        </button>
       </div>
 
       <ReactFlow
@@ -204,6 +334,8 @@ function CanvasInner() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         isValidConnection={isValidConnection}
+        onNodeDrag={onNodeDrag}
+        onNodeDragStop={onNodeDragStop}
         onPaneClick={onPaneClick}
         onNodeClick={eraserHandlers.onNodeClick}
         onNodeMouseEnter={eraserHandlers.onNodeMouseEnter}
@@ -259,8 +391,10 @@ function ActiveToolBadge() {
     select: "Select",
     sticky: "Sticky Note",
     textbox: "Text Box",
+    shape: "Shape",
     connector: "Connector",
     eraser: "Eraser",
+    video: "Storyboard / Video",
   };
   return (
     <span className="text-xs text-gray-400 font-medium">

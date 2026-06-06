@@ -54,3 +54,10 @@ body {
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
+
+/* Mind-map: node currently under a dragged node (hover-to-connect target). */
+.react-flow__node.mm-drop-target {
+  outline: 2px dashed var(--color-primary);
+  outline-offset: 3px;
+  border-radius: 14px;
+}

@@ -56,6 +56,21 @@ export function exportMindMapJSON(
   });
 }
 
+// ── Export 3: Backend graph contract ───────────────────────────────────────
+// Shapes the map into the `{ entities, connections }` payload expected by the
+// backend `POST /api/v1/summary` endpoint (sent as a JSON string under `graph`).
+export type MindMapGraph = {
+  entities: { id: string; content: string }[];
+  connections: { from: string; to: string }[];
+};
+
+export function exportMindMapGraph(nodes: Node[], edges: Edge[]): MindMapGraph {
+  return {
+    entities: nodes.map((n) => ({ id: n.id, content: nodeContent(n) })),
+    connections: edges.map((e) => ({ from: e.source, to: e.target })),
+  };
+}
+
 // ── Export 2: AI context ───────────────────────────────────────────────────
 export function exportMindMapForAI(nodes: Node[], edges: Edge[]) {
   const ideaNode = nodes.find((n) => n.id === "idea");

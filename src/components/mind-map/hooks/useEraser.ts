@@ -1,7 +1,8 @@
 "use client";
 
+import { type NodeMouseHandler, useReactFlow } from "@xyflow/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useReactFlow, type NodeMouseHandler } from "@xyflow/react";
+import { ANCHOR_NODE_IDS } from "@/components/mind-map/constants/topics";
 import { useTool } from "@/components/mind-map/context/ToolContext";
 
 export interface EraserHandlers {
@@ -49,14 +50,19 @@ export function useEraser(): UseEraserReturn {
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_e, node) => {
-      if (isEraserActive) deleteElements({ nodes: [node], edges: [] });
+      if (isEraserActive && !ANCHOR_NODE_IDS.has(node.id))
+        deleteElements({ nodes: [node], edges: [] });
     },
     [isEraserActive, deleteElements],
   );
 
   const onNodeMouseEnter: NodeMouseHandler = useCallback(
     (_e, node) => {
-      if (isEraserActive && isErasingRef.current)
+      if (
+        isEraserActive &&
+        isErasingRef.current &&
+        !ANCHOR_NODE_IDS.has(node.id)
+      )
         deleteElements({ nodes: [node], edges: [] });
     },
     [isEraserActive, deleteElements],

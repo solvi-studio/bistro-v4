@@ -92,6 +92,28 @@ export const MIND_MAP_GROUPS: MindMapGroup[] = [
   },
 ];
 
+// ── Anchor (locked) nodes ───────────────────────────────────────────────────
+// The central idea + the 4 hub nodes. These can't be moved or deleted.
+export const ANCHOR_NODE_IDS: ReadonlySet<string> = new Set([
+  IDEA_ID,
+  ...MIND_MAP_GROUPS.map((g) => g.hubId),
+]);
+
+export interface NodePalette {
+  bg: string;
+  text: string;
+}
+
+// Visual theme of the central idea node (used for color inheritance).
+export const IDEA_PALETTE: NodePalette = { bg: "#3b7cf4", text: "#ffffff" };
+
+// The leaf palette a hub passes down to its children. Idea node → IDEA_PALETTE.
+export function getHubPalette(nodeId: string): NodePalette | null {
+  if (nodeId === IDEA_ID) return IDEA_PALETTE;
+  const group = MIND_MAP_GROUPS.find((g) => g.hubId === nodeId);
+  return group ? { bg: group.leafBg, text: group.leafText } : null;
+}
+
 export function ideaNodeStyle(): CSSProperties {
   return {
     background: "#3b7cf4",
