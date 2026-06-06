@@ -1,5 +1,8 @@
 import type { Edge, Node, Viewport } from "@xyflow/react";
-import { MIND_MAP_GROUPS } from "@/components/mind-map/constants/topics";
+import {
+  MIND_MAP_GROUPS,
+  type TopicSection,
+} from "@/components/mind-map/constants/topics";
 import type { ShapeData } from "@/components/mind-map/nodes/ShapeNode";
 import type { StickyData } from "@/components/mind-map/nodes/StickyNode";
 import type { TextBoxData } from "@/components/mind-map/nodes/TextBoxNode";
@@ -56,23 +59,38 @@ export function exportMindMapJSON(
   });
 }
 
-// ── Export 3: Backend graph contract ───────────────────────────────────────
-// Shapes the map into the `{ entities, connections }` payload expected by the
-// backend `POST /api/v1/summary` endpoint (sent as a JSON string under `graph`).
-export type MindMapGraph = {
-  entities: { id: string; content: string }[];
-  connections: { from: string; to: string }[];
-};
+// ── AI context graph (shared shape) ────────────────────────────────────────
+// The structured payload describing the whole map: central idea, its hubs with
+// live leaves, free-floating nodes, and edge context. Both the backend submit
+// (`exportMindMapGraph`) and the downloadable AI export (`exportMindMapForAI`)
+// emit this exact shape.
 
-export function exportMindMapGraph(nodes: Node[], edges: Edge[]): MindMapGraph {
-  return {
-    entities: nodes.map((n) => ({ id: n.id, content: nodeContent(n) })),
-    connections: edges.map((e) => ({ from: e.source, to: e.target })),
-  };
+interface HubSummary {
+  hubId: string;
+  hubLabel: string;
+  sections: TopicSection[];
+  liveLeaves: NodeSummary[];
 }
 
-// ── Export 2: AI context ───────────────────────────────────────────────────
-export function exportMindMapForAI(nodes: Node[], edges: Edge[]) {
+interface EdgeContext {
+  id: string;
+  from: string;
+  fromContent: string;
+  to: string;
+  toContent: string;
+  hasArrow: boolean;
+  label: string;
+}
+
+export interface MindMapGraph {
+  exportedAt: string;
+  centralIdea: string;
+  hubs: HubSummary[];
+  freeNodes: NodeSummary[];
+  edges: EdgeContext[];
+}
+
+function buildMindMapGraph(nodes: Node[], edges: Edge[]): MindMapGraph {
   const ideaNode = nodes.find((n) => n.id === "idea");
   const centralIdea = ideaNode ? nodeContent(ideaNode) : "";
 
@@ -92,7 +110,7 @@ export function exportMindMapForAI(nodes: Node[], edges: Edge[]) {
     edges.filter((e) => e.source === "idea").map((e) => e.target),
   );
 
-  const hubs = [...hubIds].map((hubId) => {
+  const hubs: HubSummary[] = [...hubIds].map((hubId) => {
     const staticGroup = MIND_MAP_GROUPS.find((g) => g.hubId === hubId);
     const liveLeaves = edges
       .filter((e) => e.source === hubId)
@@ -117,7 +135,7 @@ export function exportMindMapForAI(nodes: Node[], edges: Edge[]) {
     .filter((n): n is NodeSummary => n !== undefined);
 
   type EdgeData = { arrowEnd?: boolean; label?: string };
-  const edgeContext = edges.map((e) => {
+  const edgeContext: EdgeContext[] = edges.map((e) => {
     const d = (e.data ?? {}) as EdgeData;
     return {
       id: e.id,
@@ -130,11 +148,24 @@ export function exportMindMapForAI(nodes: Node[], edges: Edge[]) {
     };
   });
 
-  downloadJSON(`mindmap-ai-${Date.now()}.json`, {
+  return {
     exportedAt: new Date().toISOString(),
     centralIdea,
     hubs,
     freeNodes,
     edges: edgeContext,
-  });
+  };
+}
+
+// ── Export 3: Backend graph payload (sent under `graph` to /api/v1/summary) ──
+export function exportMindMapGraph(nodes: Node[], edges: Edge[]): MindMapGraph {
+  return buildMindMapGraph(nodes, edges);
+}
+
+// ── Export 2: AI context (downloadable file, same shape) ────────────────────
+export function exportMindMapForAI(nodes: Node[], edges: Edge[]) {
+  downloadJSON(
+    `mindmap-ai-${Date.now()}.json`,
+    buildMindMapGraph(nodes, edges),
+  );
 }

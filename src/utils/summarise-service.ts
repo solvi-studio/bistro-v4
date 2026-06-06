@@ -8,12 +8,20 @@ export interface SummariseResult {
   shots: ShotData[];
 }
 
+// One shot row in the backend storyboard.
+interface ShotApiResponse {
+  description: string;
+  shooting_style: string;
+  camera_angle: string;
+  script: string;
+}
+
 // Shape returned by `POST /api/v1/summary`.
 interface SummaryApiResponse {
   concept: string;
   tone_of_voice: string;
   target_audience: string;
-  storyboard: string;
+  storyboard: ShotApiResponse[];
 }
 
 type SummariseStatus = "pending" | "done" | "error";
@@ -34,24 +42,22 @@ const RESULT_KEY = "bistro_summarise_result";
 let pending: Promise<SummariseResult> | null = null;
 
 // ── storyboard → shot rows ─────────────────────────────────────────────────
-// The summary endpoint returns a single storyboard string (no per-shot
-// fields), so each scene line becomes one shot. Camera/style columns are left
-// blank — they come from a richer endpoint later, not from defaults.
-function storyboardToShots(storyboard: string): ShotData[] {
-  const scenes = storyboard
-    .split(/\n+|(?<=[.!?])\s+(?=[A-Z0-9])/)
-    .map((s) => s.replace(/^\s*(?:scene|shot)?\s*\d+[).:-]?\s*/i, "").trim())
-    .filter((s) => s.length > 0);
+// The endpoint now returns structured shots. Map each onto a ShotData row;
+// `script` is a single string backend-side, so wrap it for the table's
+// line-per-entry rendering (split on newlines when present).
+function shotToRow(shot: ShotApiResponse, i: number): ShotData {
+  const lines = shot.script
+    .split(/\n+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 
-  const lines = scenes.length > 0 ? scenes : [storyboard.trim()];
-
-  return lines.map((description, i) => ({
+  return {
     shotNumber: i + 1,
-    description,
-    shootingStyle: "—",
-    cameraAngle: "—",
-    script: [description],
-  }));
+    description: shot.description,
+    shootingStyle: shot.shooting_style || "—",
+    cameraAngle: shot.camera_angle || "—",
+    script: lines.length > 0 ? lines : [shot.script],
+  };
 }
 
 function mapResponse(res: SummaryApiResponse): SummariseResult {
@@ -62,7 +68,7 @@ function mapResponse(res: SummaryApiResponse): SummariseResult {
       targetAudience: res.target_audience,
       projectName: "Your Idea",
     },
-    shots: storyboardToShots(res.storyboard),
+    shots: (res.storyboard ?? []).map(shotToRow),
   };
 }
 
