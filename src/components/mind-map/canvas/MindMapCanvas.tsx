@@ -336,6 +336,23 @@ function CanvasInner() {
       onPointerLeave={eraserHandlers.onPointerLeave}
     >
       <div className="absolute top-3 right-3 z-10 flex gap-2 pointer-events-auto">
+
+        <button
+          type="button"
+          title="Export JSON"
+          onClick={() => exportMindMapJSON(nodes, edges, getViewport())}
+          className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+        >
+          <Download size={14} /> Export
+        </button>
+        <button
+          type="button"
+          title="Export for AI analysis"
+          onClick={() => exportMindMapForAI(nodes, edges)}
+          className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+        >
+          <Bot size={14} /> AI Export
+        </button>
         
         <button
           type="button"

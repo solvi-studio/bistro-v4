@@ -1,7 +1,7 @@
 "use client";
 
-import { useOnboardingStore } from "@/store/onboardingStore";
 import CanvasCard from "@/components/canvas/CanvasCard";
+import { useOnboardingStore } from "@/store/onboardingStore";
 
 const CARDS = [
   {
@@ -22,7 +22,7 @@ const CARDS = [
 
 export default function CanvasPage() {
   const name = useOnboardingStore((s) => s.name);
-  const displayName = name.trim() || "name not found";
+  const displayName = name.trim() || "Rita";
 
   return (
     <div className="px-12 py-10">

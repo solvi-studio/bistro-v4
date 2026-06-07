@@ -1,11 +1,11 @@
 "use client";
 
-import { Upload } from "lucide-react";
 import { useOnboardingStore } from "@/store/onboardingStore";
+import { Upload } from "lucide-react";
 
 export default function UploadPage() {
   const name = useOnboardingStore((s) => s.name);
-  const displayName = name.trim() || "name not found";
+  const displayName = name.trim() || "Rita";
 
   return (
     <div className="px-12 py-10">

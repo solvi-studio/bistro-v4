@@ -1,14 +1,14 @@
 "use client";
 
-import Link from "next/link";
-import { Filter, Plus, Search, Sun, Upload } from "lucide-react";
 import { useOnboardingStore } from "@/store/onboardingStore";
+import { Filter, Plus, Search, Sun, Upload } from "lucide-react";
+import Link from "next/link";
 
 const FILTER_PILLS = ["Recent Save", "Food", "Vacation"] as const;
 
 export default function InspirationPage() {
   const name = useOnboardingStore((s) => s.name);
-  const displayName = name.trim() || "name not found Trang";
+  const displayName = name.trim() || "Rita";
 
   return (
     <div className="px-12 py-10">

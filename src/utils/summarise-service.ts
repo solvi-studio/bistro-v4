@@ -28,7 +28,13 @@ type SummariseStatus = "pending" | "done" | "error";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 const SUMMARY_ENDPOINT = `${API_BASE}/api/v1/summary`;
-const REQUEST_TIMEOUT_MS = 30000;
+// Gemini summary + Cloud Run cold start can take well over a minute — keep this
+// comfortably under the Cloud Run request limit (300s) but long enough not to
+// abort a healthy-but-slow call.
+const REQUEST_TIMEOUT_MS = 150000;
+// One automatic retry smooths over cold starts and transient network blips.
+const MAX_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 1500;
 
 // Persisted so a page reload can resume the job (graph snapshot + status, plus
 // the result once it lands). Routed through the storage seam — swappable to a
@@ -72,7 +78,14 @@ function mapResponse(res: SummaryApiResponse): SummariseResult {
   };
 }
 
-async function fetchSummary(graph: MindMapGraph): Promise<SummariseResult> {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// 4xx (except 408/429) are caller errors — retrying won't help.
+function isRetryable(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+async function attemptSummary(graph: MindMapGraph): Promise<SummariseResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -85,13 +98,44 @@ async function fetchSummary(graph: MindMapGraph): Promise<SummariseResult> {
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
-      throw new Error(`summary failed (${res.status}): ${detail}`);
+      const err = new Error(`summary failed (${res.status}): ${detail}`);
+      // Tag so the retry loop knows whether to bother.
+      (err as Error & { retryable?: boolean }).retryable = isRetryable(
+        res.status,
+      );
+      throw err;
     }
     const json = (await res.json()) as SummaryApiResponse;
     return mapResponse(json);
+  } catch (err) {
+    // Our own timeout surfaces as an AbortError — relabel it clearly.
+    if (err instanceof DOMException && err.name === "AbortError") {
+      const e = new Error("The summary took too long to generate.");
+      (e as Error & { retryable?: boolean }).retryable = true;
+      throw e;
+    }
+    throw err;
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function fetchSummary(graph: MindMapGraph): Promise<SummariseResult> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      return await attemptSummary(graph);
+    } catch (err) {
+      lastErr = err;
+      const retryable =
+        (err as Error & { retryable?: boolean }).retryable ?? true; // network errors have no flag → retry
+      if (!retryable || attempt === MAX_ATTEMPTS) break;
+      await sleep(RETRY_DELAY_MS);
+    }
+  }
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error("summary request failed");
 }
 
 // Run the request and persist status + result as it resolves, so a reload can
