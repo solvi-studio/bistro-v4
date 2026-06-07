@@ -337,7 +337,7 @@ function CanvasInner() {
     >
       <div className="absolute top-3 right-3 z-10 flex gap-2 pointer-events-auto">
 
-        <button
+        {/* <button
           type="button"
           title="Export JSON"
           onClick={() => exportMindMapJSON(nodes, edges, getViewport())}
@@ -353,7 +353,7 @@ function CanvasInner() {
         >
           <Bot size={14} /> AI Export
         </button>
-        
+         */}
         <button
           type="button"
           title="Finalise idea and generate summary"
