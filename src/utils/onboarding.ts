@@ -36,6 +36,11 @@ export type TutorialData = {
 
 export const ONBOARDING_COOKIE_KEY = "bistro_onboarding_done";
 
+// Skip the onboarding flow entirely. Disabled by default for now; set
+// NEXT_PUBLIC_DISABLE_ONBOARDING="false" to bring the flow back.
+export const ONBOARDING_DISABLED =
+  process.env.NEXT_PUBLIC_DISABLE_ONBOARDING !== "false";
+
 export const TUT_DATA_KEY = "bistro_tutorial_data";
 
 export const LANE_OPTIONS = [

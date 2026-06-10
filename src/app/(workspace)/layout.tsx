@@ -1,5 +1,5 @@
 import Sidebar from "@/components/canvas/Sidebar";
-import WorkspaceHelper from "@/components/creative/WorkspaceHelper";
+import WorkspaceShell from "@/components/creative/WorkspaceShell";
 
 export default function WorkspaceLayout({
   children,
@@ -9,9 +9,7 @@ export default function WorkspaceLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-white text-[#1a1a1a]">
       <Sidebar />
-
-      <WorkspaceHelper />
-      <main className="flex-1 min-w-0 overflow-hidden">{children}</main>
+      <WorkspaceShell>{children}</WorkspaceShell>
     </div>
   );
 }

@@ -26,7 +26,7 @@ export default function CreativeSpacesClient() {
   return (
     <div className="px-2 py-6 md:px-5 md:py-9">
       <h1 className="text-2xl font-bold text-gray-900 md:text-[30px]">
-        Rita's Canvas
+        Your's Canvas
       </h1>
       <p className="mt-1 text-sm text-gray-400">Recent Creative Ideas</p>
 

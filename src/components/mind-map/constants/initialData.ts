@@ -18,7 +18,7 @@ export const INITIAL_NODES: Node[] = [
     id: IDEA_ID,
     type: "default",
     position: IDEA_POS,
-    data: { label: "Your Idea" },
+    data: { label: "Scene 1" },
     style: ideaNodeStyle(),
     // Anchor node — movable, but cannot be deleted.
     deletable: false,
@@ -29,8 +29,8 @@ export const INITIAL_NODES: Node[] = [
     position: g.hubPos,
     data: { label: g.hubLabel },
     style: hubNodeStyle(g.hubBg),
-    // Anchor node — movable, but cannot be deleted.
-    deletable: false,
+    // Hubs are deletable like any other node now.
+    deletable: true,
   })),
 ];
 

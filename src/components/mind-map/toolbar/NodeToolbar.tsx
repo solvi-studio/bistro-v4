@@ -1,6 +1,5 @@
 "use client";
 
-import { RefObject, useCallback } from "react";
 import {
   NodeToolbar as FlowNodeToolbar,
   Position,
@@ -14,19 +13,29 @@ import {
   Strikethrough,
   Trash2,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import {
-  StickyData,
-  STICKY_COLORS,
-} from "@/components/mind-map/nodes/StickyNode";
-import { TextBoxData, FontSize } from "@/components/mind-map/nodes/TextBoxNode";
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { ANCHOR_NODE_IDS } from "@/components/mind-map/constants/topics";
 import {
-  ShapeData,
-  ShapeType,
   SHAPE_FILL_COLORS,
   SHAPE_ICONS,
   SHAPE_TYPES,
+  type ShapeData,
+  ShapeType,
 } from "@/components/mind-map/nodes/ShapeNode";
+import {
+  STICKY_COLORS,
+  type StickyData,
+} from "@/components/mind-map/nodes/StickyNode";
+import type {
+  FontSize,
+  TextBoxData,
+} from "@/components/mind-map/nodes/TextBoxNode";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -54,7 +63,13 @@ type ShapeProps = {
   selected: boolean;
 };
 
-type Props = StickyProps | TextBoxProps | ShapeProps;
+type TopicProps = {
+  nodeType: "topic";
+  id: string;
+  selected: boolean;
+};
+
+type Props = StickyProps | TextBoxProps | ShapeProps | TopicProps;
 
 // ─── Shared primitives ─────────────────────────────────────────────────────────
 
@@ -376,6 +391,68 @@ function ShapeControls({ id, data }: { id: string; data: ShapeData }) {
   );
 }
 
+// ─── Topic section (default nodes: idea / hubs / leaves) ───────────────────────
+
+const TOPIC_COLORS = [
+  { label: "Blue", value: "#e3ecfb" },
+  { label: "Pink", value: "#fbe0e1" },
+  { label: "Yellow", value: "#f7e7b4" },
+  { label: "Gray", value: "#ededed" },
+  { label: "White", value: "#ffffff" },
+] as const;
+
+const TOPIC_FONT_SIZES = [
+  { label: "S", value: 12 },
+  { label: "M", value: 14 },
+  { label: "L", value: 18 },
+] as const;
+
+// Topic nodes carry their look in node.style (set by leaf/hub/idea palette),
+// so edits go through updateNode(style) rather than updateNodeData.
+function TopicControls({ id }: { id: string }) {
+  const { updateNode, deleteElements, getNode } = useReactFlow();
+  const style = (getNode(id)?.style ?? {}) as React.CSSProperties;
+  const bg =
+    typeof style.background === "string" ? style.background : "#e3ecfb";
+  const fontSize = typeof style.fontSize === "number" ? style.fontSize : 12;
+  const isLocked = ANCHOR_NODE_IDS.has(id);
+
+  const setStyle = (patch: React.CSSProperties) =>
+    updateNode(id, (n) => ({ style: { ...n.style, ...patch } }));
+
+  return (
+    <>
+      <ColorPickerRow
+        value={bg}
+        onChange={(background) => setStyle({ background })}
+        presets={TOPIC_COLORS}
+      />
+
+      <Divider />
+
+      <FontSizeRow
+        value={fontSize}
+        onChange={(fs) => setStyle({ fontSize: fs })}
+        presets={TOPIC_FONT_SIZES}
+      />
+
+      {/* Scene 1 (the locked anchor) can't be deleted. */}
+      {!isLocked && (
+        <>
+          <Divider />
+          <ToolBtn
+            title="Delete"
+            danger
+            onClick={() => deleteElements({ nodes: [{ id }], edges: [] })}
+          >
+            <Trash2 size={13} />
+          </ToolBtn>
+        </>
+      )}
+    </>
+  );
+}
+
 // ─── Unified export ────────────────────────────────────────────────────────────
 
 export default function NodeToolbar(props: Props) {
@@ -390,6 +467,8 @@ export default function NodeToolbar(props: Props) {
           <StickyControls id={props.id} data={props.data} />
         ) : props.nodeType === "shape" ? (
           <ShapeControls id={props.id} data={props.data} />
+        ) : props.nodeType === "topic" ? (
+          <TopicControls id={props.id} />
         ) : (
           <TextBoxControls
             id={props.id}

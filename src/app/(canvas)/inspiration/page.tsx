@@ -8,7 +8,7 @@ const FILTER_PILLS = ["Recent Save", "Food", "Vacation"] as const;
 
 export default function InspirationPage() {
   const name = useOnboardingStore((s) => s.name);
-  const displayName = name.trim() || "Rita";
+  const displayName = name.trim() || "Your";
 
   return (
     <div className="px-12 py-10">

@@ -1,13 +1,13 @@
 "use client";
 
 import { useAuth, useUser } from "@clerk/nextjs";
+import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { isOnboardingDone } from "@/utils/onboarding";
-import Link from "next/link";
-import dynamic from "next/dynamic";
 import Blob from "@/components/onboarding/Blob";
 import MascotAvatar from "@/components/onboarding/MascotAvatar";
+import { isOnboardingDone, ONBOARDING_DISABLED } from "@/utils/onboarding";
 
 const BackgroundCanvas = dynamic(
   () => import("@/components/onboarding/t3-empty/backgroundCanvas"),
@@ -33,7 +33,7 @@ export default function Home() {
       return;
     }
 
-    if (!isOnboardingDone(user?.unsafeMetadata)) {
+    if (!ONBOARDING_DISABLED && !isOnboardingDone(user?.unsafeMetadata)) {
       router.replace("/onboarding");
       return;
     }
@@ -54,7 +54,10 @@ export default function Home() {
       <BackgroundCanvas />
       <Blob color="#fca5a5" className="w-50 h-50 -top-15 -left-15" />
       <Blob color="#86efac" className="w-50 h-50 -bottom-10 -right-10" />
-      <Blob color="#93c5fd" className="w-60 h-60 -top-20 -right-20 opacity-40" />
+      <Blob
+        color="#93c5fd"
+        className="w-60 h-60 -top-20 -right-20 opacity-40"
+      />
       <div className="relative flex flex-col items-center text-center px-8">
         <MascotAvatar size={80} />
         <h1 className="text-[40px] font-semibold text-[#1a1a1a] leading-tight mb-3">

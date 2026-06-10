@@ -39,5 +39,5 @@ export default function OnboardingPageClient() {
     );
   }
 
-  return <OnboardingFlow onComplete={() => router.replace("/canvas")} />;
+  return <OnboardingFlow onComplete={() => router.replace("/creative")} />;
 }

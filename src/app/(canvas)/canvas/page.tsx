@@ -22,7 +22,7 @@ const CARDS = [
 
 export default function CanvasPage() {
   const name = useOnboardingStore((s) => s.name);
-  const displayName = name.trim() || "Rita";
+  const displayName = name.trim() || "Your";
 
   return (
     <div className="px-12 py-10">

@@ -7,7 +7,7 @@ Extracted 2026-05-21. No local Figma variables defined — design uses raw hex v
 
 | Screen | Node ID | Notes |
 |--------|---------|-------|
-| Main #1 - Visual | 2781:32 | Home / "Rita's Canvas" dashboard |
+| Main #1 - Visual | 2781:32 | Home / "Your's Canvas" dashboard |
 | Creative Spaces | 2781:85 | |
 | Inspo Pool | 2987:453 | Upload screen (`solar:upload-linear`) |
 | Summarise Idea | 2983:231 | AI sparkles (`famicons:sparkles-outline`) |

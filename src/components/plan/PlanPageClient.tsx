@@ -5,7 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { CalendarEvent, PlanTask } from "@/types/plan";
 import { loadEvents } from "@/utils/calendar";
-import { getPlanTasks, getSummariseData, savePlanTasks } from "@/utils/plan";
+import {
+  getDefaultPlanTasks,
+  getPlanTasks,
+  getSummariseData,
+  savePlanTasks,
+} from "@/utils/plan";
 import EventDetailCard from "./EventDetailCard";
 import ExecutionCalendar from "./ExecutionCalendar";
 import PlanBoard from "./PlanBoard";
@@ -32,6 +37,13 @@ export default function PlanPageClient() {
   function handleTasksUpdate(updated: PlanTask[]) {
     setTasks(updated);
     savePlanTasks(scriptId, updated);
+  }
+
+  // Project button → generate the default task template once, only while the
+  // board is empty (so repeated clicks don't duplicate the tasks).
+  function generateDefaults() {
+    if (tasks.length > 0) return;
+    handleTasksUpdate(getDefaultPlanTasks());
   }
 
   function handleDateSelect(date: string) {
@@ -81,10 +93,20 @@ export default function PlanPageClient() {
           </h2>
         </div>
 
-        <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary)] px-3.5 py-1.5 text-sm font-semibold text-white">
+        <button
+          type="button"
+          onClick={generateDefaults}
+          disabled={tasks.length > 0}
+          title={
+            tasks.length > 0
+              ? "Default tasks already added"
+              : "Generate the default task list"
+          }
+          className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary)] px-3.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)] disabled:cursor-default disabled:opacity-60 disabled:hover:bg-[var(--color-primary)]"
+        >
           <Sparkles size={14} />
           {projectName}
-        </span>
+        </button>
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col gap-4 px-8 pb-8 overflow-hidden">

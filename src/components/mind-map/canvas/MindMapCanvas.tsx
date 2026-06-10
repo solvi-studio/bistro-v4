@@ -435,24 +435,6 @@ function CanvasInner() {
 
 // ─── Canvas root (layout shell) ───────────────────────────────────────────────
 
-function ActiveToolBadge() {
-  const { activeTool } = useTool();
-  const labels: Record<string, string> = {
-    select: "Select",
-    sticky: "Sticky Note",
-    textbox: "Text Box",
-    shape: "Shape",
-    connector: "Connector",
-    eraser: "Eraser",
-    video: "Storyboard / Video",
-  };
-  return (
-    <span className="text-xs text-gray-400 font-medium">
-      {labels[activeTool]}
-    </span>
-  );
-}
-
 function CanvasRoot() {
   const params = useSearchParams();
   // Remount the whole flow when the active idea changes so each map loads its
@@ -462,7 +444,7 @@ function CanvasRoot() {
   return (
     <div className="w-full h-full flex flex-col bg-white overflow-hidden">
       {/* <header className="shrink-0 h-11 border-b border-gray-100 flex items-center px-4 gap-3"> */}
-        {/* <span className="text-sm font-semibold text-gray-800 tracking-tight">
+      {/* <span className="text-sm font-semibold text-gray-800 tracking-tight">
           Mind Map
         </span>
         <ActiveToolBadge /> */}
@@ -472,7 +454,7 @@ function CanvasRoot() {
         <ReactFlowProvider key={mapId}>
           <ResizableSplit
             left={
-              <CreativeHelperSidebar embedded showReminder={false}>
+              <CreativeHelperSidebar embedded showReminder={true}>
                 <MindMapSidePanel />
               </CreativeHelperSidebar>
             }

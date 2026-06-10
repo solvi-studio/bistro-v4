@@ -93,11 +93,9 @@ export const MIND_MAP_GROUPS: MindMapGroup[] = [
 ];
 
 // ── Anchor (locked) nodes ───────────────────────────────────────────────────
-// The central idea + the 4 hub nodes. These can't be moved or deleted.
-export const ANCHOR_NODE_IDS: ReadonlySet<string> = new Set([
-  IDEA_ID,
-  ...MIND_MAP_GROUPS.map((g) => g.hubId),
-]);
+// Only the central idea (Scene 1) is locked — it can't be deleted or erased.
+// The hub nodes are now freely editable and deletable like any other node.
+export const ANCHOR_NODE_IDS: ReadonlySet<string> = new Set([IDEA_ID]);
 
 export interface NodePalette {
   bg: string;
@@ -149,7 +147,7 @@ export function leafNodeStyle(bg: string, text: string): CSSProperties {
     padding: "8px 16px",
     fontSize: 12,
     fontWeight: 600,
-    maxWidth: 210,
+    // No maxWidth — lets the node be resized wider via the NodeResizer.
     boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
   };
 }

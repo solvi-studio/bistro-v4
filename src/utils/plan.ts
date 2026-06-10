@@ -196,9 +196,16 @@ export function getPlanTasks(scriptId: string): PlanTask[] {
   if (raw === null && scriptId === "default") {
     raw = safeGet<PlanTask[] | null>(LEGACY_TASKS_KEY, null);
   }
-  // Normalize tasks saved before `phase` existed so old data still slots into a
-  // column instead of vanishing.
-  return (raw ?? SEED_TASKS).map((t) => ({ ...t, phase: t.phase ?? "pre" }));
+  // Empty board by default — the user generates the template via the project
+  // button. Normalize tasks saved before `phase` existed so old data still slots
+  // into a column instead of vanishing.
+  return (raw ?? []).map((t) => ({ ...t, phase: t.phase ?? "pre" }));
+}
+
+// Fresh copy of the default task template (unique ids), generated on demand
+// from the plan page's project button.
+export function getDefaultPlanTasks(): PlanTask[] {
+  return SEED_TASKS.map((t, i) => ({ ...t, id: `seed-${Date.now()}-${i}` }));
 }
 
 export function savePlanTasks(scriptId: string, tasks: PlanTask[]): void {

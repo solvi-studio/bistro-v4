@@ -294,22 +294,20 @@ export default function CreativeHelperSidebar({
         </div>
       )}
 
-      {/* Flow reminder + watch guide */}
-      {(showReminder || !embedded) && (
-        <div className={`shrink-0 px-5 pb-5 ${children ? "" : "flex-1"}`}>
-          {showReminder && <CreativeFlowReminder />}
-          {!embedded && (
-            <button
-              type="button"
-              onClick={rewatch}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-            >
-              <RotateCcw size={15} />
-              Watch guide
-            </button>
-          )}
-        </div>
-      )}
+      {/* Flow reminder + watch guide (watch guide always visible) */}
+      <div
+        className={`flex shrink-0 flex-col px-5 pb-5 ${children ? "" : "flex-1"}`}
+      >
+        {showReminder && <CreativeFlowReminder />}
+        <button
+          type="button"
+          onClick={rewatch}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+        >
+          <RotateCcw size={15} />
+          Watch guide
+        </button>
+      </div>
     </aside>
   );
 }
