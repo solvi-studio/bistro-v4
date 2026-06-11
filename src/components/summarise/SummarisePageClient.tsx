@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { SummariseLoadState } from "@/types/summarise";
 import { resumeSummary, type SummariseResult } from "@/utils/summarise-service";
@@ -15,6 +15,10 @@ export default function SummarisePageClient() {
   const [data, setData] = useState<SummariseResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const router = useRouter();
+  const params = useSearchParams();
+  // Carry the active idea across stages so Confirm/Back keep the same script.
+  const script = params.get("script");
+  const scriptQuery = script ? `?script=${encodeURIComponent(script)}` : "";
 
   useEffect(() => {
     let cancelled = false;
@@ -24,7 +28,7 @@ export default function SummarisePageClient() {
 
     // Never submitted (e.g. direct visit) — nothing to show, bounce back.
     if (!pending) {
-      router.replace("/mind-map");
+      router.replace(`/mind-map${scriptQuery}`);
       return;
     }
 
@@ -43,7 +47,7 @@ export default function SummarisePageClient() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, scriptQuery]);
 
   return (
     <div
@@ -97,7 +101,7 @@ export default function SummarisePageClient() {
             )}
             <button
               type="button"
-              onClick={() => router.push("/mind-map")}
+              onClick={() => router.push(`/mind-map${scriptQuery}`)}
               className="mt-6 px-6 py-2.5 rounded-full bg-[var(--color-primary)] text-white text-sm hover:bg-[var(--color-primary-hover)] transition-colors"
               style={{ fontWeight: 600 }}
             >
@@ -150,7 +154,7 @@ export default function SummarisePageClient() {
             <div className="px-6 py-4 flex justify-between shrink-0 border-t border-gray-100">
               <button
                 type="button"
-                onClick={() => router.push("/mind-map")}
+                onClick={() => router.push(`/mind-map${scriptQuery}`)}
                 className="px-6 py-2.5 rounded-full bg-gray-500 text-gray-100 text-sm hover:bg-gray-700 transition-colors"
                 style={{ fontWeight: 600 }}
               >
@@ -158,7 +162,7 @@ export default function SummarisePageClient() {
               </button>
               <button
                 type="button"
-                onClick={() => router.push("/plan")}
+                onClick={() => router.push(`/plan${scriptQuery}`)}
                 className="px-6 py-2.5 rounded-full bg-[var(--color-primary)] text-white text-sm hover:bg-[var(--color-primary-hover)] transition-colors"
                 style={{ fontWeight: 600 }}
               >
