@@ -4,3 +4,4 @@ export const demoUsers = pgTable('demo_users', {
   name: text('name'),
   profilePicture: text('profile_picture'),
 });
+
