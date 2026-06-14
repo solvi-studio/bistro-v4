@@ -1,7 +1,8 @@
 import { integer, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { bistroFeSchema, timestamps } from "../utils";
-import { folders } from "./folders";
 import { relations } from "drizzle-orm/relations";
+import { timestamps } from "../utils";
+import { folders } from "./folders";
+import { bistroFeSchema } from "./schema";
 
 export const phaseEnum = bistroFeSchema.enum('phase', ['pre-production', 'production', 'post-production']);
 

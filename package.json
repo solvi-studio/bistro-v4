@@ -10,7 +10,9 @@
     "format": "biome format --write",
     "db:generate": "pnpm drizzle-kit generate",
     "db:migrate": "pnpm drizzle-kit migrate",
-    "db:studio": "pnpm drizzle-kit studio"
+    "db:studio": "pnpm drizzle-kit studio",
+    "db:introspect": "pnpm drizzle-kit introspect",
+    "db:push": "pnpm drizzle-kit push"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.3.7",

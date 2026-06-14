@@ -1,9 +1,10 @@
 import { jsonb, serial, text, varchar } from "drizzle-orm/pg-core";
-import { bistroFeSchema, timestamps } from "../utils";
-import { users } from "./users";
 import { relations } from "drizzle-orm/relations";
+import { timestamps } from "../utils";
+import { bistroFeSchema } from "./schema";
 import { summaries } from "./summaries";
 import { tasks } from "./tasks";
+import { users } from "./users";
 
 export const folders = bistroFeSchema.table('folders', {
   id: serial().primaryKey(),
