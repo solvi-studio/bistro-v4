@@ -1,0 +1,5 @@
+CREATE USER fe_user WITH PASSWORD 'L&QpQ&0328Blsr';
+
+CREATE USER be_user WITH PASSWORD '2!wTc8@lO5&6qi';
+
+bistro_fe - new schema name

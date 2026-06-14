@@ -1,8 +1,11 @@
-import { jsonb, pgTable, serial, text, varchar } from "drizzle-orm/pg-core";
-import { timestamps } from "../utils";
+import { jsonb, serial, text, varchar } from "drizzle-orm/pg-core";
+import { bistroFeSchema, timestamps } from "../utils";
 import { users } from "./users";
+import { relations } from "drizzle-orm/relations";
+import { summaries } from "./summaries";
+import { tasks } from "./tasks";
 
-export const folders = pgTable('folders', {
+export const folders = bistroFeSchema.table('folders', {
   id: serial().primaryKey(),
   userId: text().references(() => users.id),
   name: varchar({ length: 255 }),
@@ -13,3 +16,12 @@ export const folders = pgTable('folders', {
   targetAudience: jsonb(),
   ...timestamps
 });
+
+export const foldersRelations = relations(folders, ({one, many}) => ({
+  users: one(users, {
+    fields: [folders.userId],
+    references: [users.id]
+  }),
+  summaries: many(summaries),
+  tasks: many(tasks),
+}));

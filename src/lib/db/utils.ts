@@ -1,4 +1,7 @@
-import { timestamp } from "drizzle-orm/pg-core";
+import { pgSchema, timestamp } from "drizzle-orm/pg-core";
+
+// Schema
+export const bistroFeSchema = pgSchema("bistro_fe");
 
 export const timestamps = {
   createdAt: timestamp({ mode: 'date' }).defaultNow().notNull(),

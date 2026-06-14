@@ -1,12 +1,12 @@
 {
-  "id": "31fb2aa0-55c8-474d-916b-9c3bc82e4385",
-  "prevId": "03c5bad0-f791-4af1-b7e0-8340a22acb13",
+  "id": "641241fc-e23c-45ef-a286-39854f80befd",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.demo_users": {
-      "name": "demo_users",
-      "schema": "",
+    "bistro_fe.folders": {
+      "name": "folders",
+      "schema": "bistro_fe",
       "columns": {
         "id": {
           "name": "id",
@@ -14,17 +14,254 @@
           "primaryKey": true,
           "notNull": true
         },
-        "name": {
-          "name": "name",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "profile_picture": {
-          "name": "profile_picture",
-          "type": "text",
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
+        },
+        "emoji": {
+          "name": "emoji",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "big_picture": {
+          "name": "big_picture",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "composition": {
+          "name": "composition",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tone_mood": {
+          "name": "tone_mood",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_audience": {
+          "name": "target_audience",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "folders_user_id_users_id_fk": {
+          "name": "folders_user_id_users_id_fk",
+          "tableFrom": "folders",
+          "tableTo": "users",
+          "schemaTo": "bistro_fe",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "bistro_fe.summaries": {
+      "name": "summaries",
+      "schema": "bistro_fe",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "folder_id": {
+          "name": "folder_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "summary_result": {
+          "name": "summary_result",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completion": {
+          "name": "completion",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "summaries_folder_id_folders_id_fk": {
+          "name": "summaries_folder_id_folders_id_fk",
+          "tableFrom": "summaries",
+          "tableTo": "folders",
+          "schemaTo": "bistro_fe",
+          "columnsFrom": [
+            "folder_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "bistro_fe.tasks": {
+      "name": "tasks",
+      "schema": "bistro_fe",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "folder_id": {
+          "name": "folder_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phase": {
+          "name": "phase",
+          "type": "phase",
+          "typeSchema": "bistro_fe",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date": {
+          "name": "date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tasks_folder_id_folders_id_fk": {
+          "name": "tasks_folder_id_folders_id_fk",
+          "tableFrom": "tasks",
+          "tableTo": "folders",
+          "schemaTo": "bistro_fe",
+          "columnsFrom": [
+            "folder_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "bistro_fe.users": {
+      "name": "users",
+      "schema": "bistro_fe",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {},
@@ -36,7 +273,17 @@
       "isRLSEnabled": false
     }
   },
-  "enums": {},
+  "enums": {
+    "bistro_fe.phase": {
+      "name": "phase",
+      "schema": "bistro_fe",
+      "values": [
+        "pre-production",
+        "production",
+        "post-production"
+      ]
+    }
+  },
   "schemas": {},
   "sequences": {},
   "roles": {},
