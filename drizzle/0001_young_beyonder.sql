@@ -1,0 +1,1 @@
+ALTER TABLE "nextjs_app_schema"."users" ADD COLUMN "email" varchar;

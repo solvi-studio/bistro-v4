@@ -20,14 +20,6 @@ Open [http://localhost:3000](http://localhost:3000).
 - Onboarding completion returns users to `/` (temporary workspace destination)
 - Migrated onboarding flow UI, state helpers, avatar assets, and animated background
 
-### WXT → Next.js breaking changes captured in this slice
-
-1. WXT multi-entry pages (`onboarding.html`, `bookmarks.html`) were replaced by Next routes.
-2. Extension-only APIs (`browser.runtime.getURL`, `browser.tabs.create`, `webextension-polyfill`) are not used.
-3. Onboarding uses explicit client boundaries (`"use client"`) for browser APIs (`window`, `localStorage`).
-4. Storage behavior moved from extension-context assumptions to web-app local storage usage.
-5. Vite `?raw` shader imports were replaced with TypeScript shader string modules for Turbopack compatibility.
-
 ### Replay onboarding in dev/test
 
 - Default behavior remains once-only after completion.
@@ -37,3 +29,16 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Next Slice
 
 - Port the bookmarks/workspace experience and replace the temporary `/` placeholder destination with real app navigation.
+
+## Interact with database
+
+1. Modify your schema in `src/lib/db/schema`
+2. Run `pnpm db:generate` to gen SQL file
+3. Run `pnpm db:migrate` to apply migration
+
+DO NOT use `drizzle-kit push`
+
+Drizzle-kit is notorious for not producing logs if it s command fail, if so, you can test with spinning up local Postgres
+1. Write `docker-compose.yaml`
+2. Run the service
+3. Interact with the local db using Drizzle to see logs

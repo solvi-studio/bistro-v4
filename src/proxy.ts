@@ -14,7 +14,7 @@ export default clerkMiddleware(
   },
   { 
     frontendApiProxy: {
-      enabled: true,
+      enabled: process.env.NEXT_PUBLIC_ENABLE_CLERK_PROXY === 'true',
     }
   } 
 )

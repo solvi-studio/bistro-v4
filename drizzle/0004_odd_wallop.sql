@@ -1,0 +1,1 @@
+ALTER TABLE "nextjs_app_schema"."tasks" DROP COLUMN "test_field";

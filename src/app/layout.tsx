@@ -37,13 +37,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isClerkProxyEnabled = process.env.NEXT_PUBLIC_ENABLE_CLERK_PROXY === 'true';
+
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} ${dmSerifDisplay.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ClerkProvider proxyUrl='https://solvi.studio/__clerk'>
+        <ClerkProvider {...(isClerkProxyEnabled ? { proxyUrl: 'https://solvi.studio/__clerk' } : {})}>
           {children}
         </ClerkProvider>
       </body>
