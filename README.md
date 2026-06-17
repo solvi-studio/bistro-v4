@@ -37,3 +37,8 @@ Open [http://localhost:3000](http://localhost:3000).
 3. Run `pnpm db:migrate` to apply migration
 
 DO NOT use `drizzle-kit push`
+
+Drizzle-kit is notorious for not producing logs if it s command fail, if so, you can test with spinning up local Postgres
+1. Write `docker-compose.yaml`
+2. Run the service
+3. Interact with the local db using Drizzle to see logs
