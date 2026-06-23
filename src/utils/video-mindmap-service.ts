@@ -28,8 +28,9 @@ interface VideoMindmapApiResponse {
   composition: string[];
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
-const ENDPOINT = `${API_BASE}/api/v1/video-mindmap`;
+// Same-origin Next.js route handler that proxies to the backend server-side.
+// The real backend URL (API_URL) never reaches the browser.
+const ENDPOINT = "/api/v1/video-mindmap";
 // TikTok scrape + Gemini analysis + Cloud Run cold start can take well over a
 // minute — keep under the Cloud Run request limit (300s) but long enough not to
 // abort a healthy-but-slow call.

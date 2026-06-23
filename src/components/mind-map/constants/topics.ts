@@ -25,8 +25,10 @@ export interface MindMapGroup {
   sections: TopicSection[];
 }
 
-// The 4 required hub nodes that ring the central idea node. Every panel-spawned
-// topic node attaches to one of these hubs.
+// The 4 hub nodes that ring the central idea node. Every panel-spawned topic
+// node attaches to one of these hubs. Big Picture is script-derived (rendered as
+// the read-only platform/goal box above the shortlist); Visual / Audio / Script
+// carry the draggable shortlist chips.
 export const MIND_MAP_GROUPS: MindMapGroup[] = [
   {
     hubId: "hub-bigpicture",
@@ -40,52 +42,46 @@ export const MIND_MAP_GROUPS: MindMapGroup[] = [
     sections: [],
   },
   {
-    hubId: "hub-composition",
-    hubLabel: "Composition",
+    hubId: "hub-visual",
+    hubLabel: "Visual",
     hubBg: "#1f2430",
     hubPos: { x: 120, y: 90 },
+    leafDir: -1,
+    leafBg: "#fbe0e1",
+    leafText: "#d6494e",
+    sections: [
+      {
+        items: ["Scene Description", "Shooting Style"],
+        allowAdd: true,
+      },
+    ],
+  },
+  {
+    hubId: "hub-audio",
+    hubLabel: "Audio",
+    hubBg: "#1f2430",
+    hubPos: { x: 90, y: 320 },
     leafDir: -1,
     leafBg: "#e3ecfb",
     leafText: "#3b6fd4",
     sections: [
       {
-        label: "Format",
-        items: ["Short-form 60 secs", "Live Stream", "Video Series"],
-        allowAdd: true,
-      },
-      {
-        label: "Type of Shooting",
-        items: ["Wide shot", "Close up", "Shoulder Level"],
+        items: ["Voiceover", "Trending Music", "Sound Effect"],
         allowAdd: true,
       },
     ],
   },
   {
-    hubId: "hub-tone",
-    hubLabel: "Tone & Mood",
-    hubBg: "#1f2430",
-    hubPos: { x: 90, y: 320 },
-    leafDir: -1,
-    leafBg: "#ededed",
-    leafText: "#4b5563",
-    sections: [
-      {
-        items: ["Warm & soft", "Energetic", "Calm & cinematic", "Playful"],
-        allowAdd: true,
-      },
-    ],
-  },
-  {
-    hubId: "hub-audience",
-    hubLabel: "Target Audience",
+    hubId: "hub-script",
+    hubLabel: "Script",
     hubBg: "#1f2430",
     hubPos: { x: 120, y: 550 },
     leafDir: -1,
-    leafBg: "#ededed",
-    leafText: "#4b5563",
+    leafBg: "#fbeec6",
+    leafText: "#b08400",
     sections: [
       {
-        items: ["Lifestyle GenZ", "Fitness enthusiasts", "Travel lovers"],
+        items: ["Concept Writing", "Timing"],
         allowAdd: true,
       },
     ],

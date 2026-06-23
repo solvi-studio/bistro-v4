@@ -27,6 +27,22 @@ pnpm format           # Format code with Biome
 - **Animation**: GSAP
 - **3D Graphics**: Three.js (custom shaders for onboarding background)
 
+### Typography
+
+- **Primary UI font is Poppins.** It is loaded via `next/font/google` in
+  `src/app/layout.tsx` (exposed as the `--font-poppins` CSS variable) and mapped
+  to the Tailwind `font-poppins` utility in `src/app/globals.css` (`@theme`).
+- **Apply `font-poppins` on any modal/dialog/overlay root** (e.g.
+  `CreateProjectModal`). Overlays render in a portal-like fixed layer and do not
+  always inherit the body font, so set it explicitly.
+- **Weights loaded: 400, 500, 600, 700.** Use the matching Tailwind weight
+  utility — `font-normal` (400), `font-medium` (500), `font-semibold` (600),
+  `font-bold` (700). The "Create your new project" modal title MUST stay
+  **Poppins Medium** (`font-poppins font-medium`). If you need a weight that is
+  not in the list above, add it to the `Poppins({ weight: [...] })` array in
+  `layout.tsx` first — Tailwind weight classes silently fall back to the nearest
+  loaded weight otherwise.
+
 ### Directory Structure
 ```
 src/

@@ -5,20 +5,16 @@ import { GripVertical, Plus } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  leafNodeStyle,
   MIND_MAP_GROUPS,
   type MindMapGroup,
-  type TopicSection,
 } from "@/components/mind-map/constants/topics";
-import { EDGE_MARKER } from "@/components/mind-map/edges/edgeTypes";
-import { getScripts } from "@/utils/creative";
-import { pickHandles } from "@/utils/mind-map-handles";
+import {
+  spawnTopicNode,
+  TOPIC_DND_MIME,
+  type TopicDragPayload,
+} from "@/components/mind-map/utils/spawnTopic";
+import { getScripts, platformLabel } from "@/utils/creative";
 import { loadCustomItems, saveCustomItems } from "@/utils/mind-map-store";
-
-function truncate(text: string, max = 48): string {
-  const t = text.trim();
-  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
-}
 
 export default function MindMapSidePanel() {
   const { addNodes, addEdges, getNode, getNodes } = useReactFlow();
@@ -26,29 +22,13 @@ export default function MindMapSidePanel() {
   const scriptId = params.get("script");
   const mapId = scriptId ?? "default";
 
-  // Big Picture topics come from the active script's compose answers.
-  const bigPictureSections = useMemo<TopicSection[]>(() => {
-    const script = scriptId
-      ? getScripts().find((s) => s.id === scriptId)
-      : null;
-    return [
-      {
-        label: "The core concept",
-        items: [script?.purpose?.trim() || "Your core concept"],
-        allowAdd: false,
-      },
-      {
-        label: "The Intro",
-        items: [script?.intro?.trim() || "Your intro idea"],
-        allowAdd: false,
-      },
-      {
-        label: "The Outro",
-        items: [script?.outro?.trim() || "Your outro idea"],
-        allowAdd: false,
-      },
-    ];
-  }, [scriptId]);
+  // The active script — drives the read-only platform/goal box above the
+  // shortlist. Copied verbatim from the create-project modal; not editable here.
+  const script = useMemo(
+    () =>
+      scriptId ? (getScripts().find((s) => s.id === scriptId) ?? null) : null,
+    [scriptId],
+  );
 
   // Which section's "Add Your Own" input is open, and its draft value.
   const [addingKey, setAddingKey] = useState<string | null>(null);
@@ -73,45 +53,20 @@ export default function MindMapSidePanel() {
     return () => clearTimeout(t);
   }, [mapId, customItems]);
 
+  // Click spawns at the hub's default stagger; drag (below) lets the cursor
+  // decide placement. Both funnel through the shared spawn helper.
   function spawnTopic(group: MindMapGroup, label: string) {
-    const text = label.trim();
-    if (!text) return;
-    const hub = getNode(group.hubId);
-    if (!hub) return;
+    spawnTopicNode({ addNodes, addEdges, getNode, getNodes }, group, label);
+  }
 
-    const siblings = getNodes().filter((n) =>
-      n.id.startsWith(`topic-${group.hubId}-`),
-    );
-    const id = `topic-${group.hubId}-${Date.now()}`;
-    const position = {
-      x: hub.position.x + group.leafDir * 250,
-      y: hub.position.y + siblings.length * 64 - 40,
-    };
-
-    addNodes({
-      id,
-      type: "default",
-      position,
-      data: { label: truncate(text) },
-      style: leafNodeStyle(group.leafBg, group.leafText),
-    });
-    // Every spawned topic node is wired to its hub, attaching to the handles
-    // that face each other (chosen once, here at creation).
-    const { sourceHandle, targetHandle } = pickHandles(hub, {
-      position,
-      width: 210,
-      height: 40,
-    });
-    addEdges({
-      id: `e-${id}`,
-      source: group.hubId,
-      target: id,
-      sourceHandle,
-      targetHandle,
-      type: "labeled",
-      data: { arrowEnd: true },
-      markerEnd: EDGE_MARKER,
-    });
+  function handleDragStart(
+    e: React.DragEvent,
+    group: MindMapGroup,
+    label: string,
+  ) {
+    const payload: TopicDragPayload = { hubId: group.hubId, label };
+    e.dataTransfer.setData(TOPIC_DND_MIME, JSON.stringify(payload));
+    e.dataTransfer.effectAllowed = "copy";
   }
 
   // Add the typed topic to the section's chip list — does NOT spawn a node.
@@ -132,8 +87,23 @@ export default function MindMapSidePanel() {
     <div className="flex flex-col gap-6">
       <h2 className="text-base font-bold text-gray-800">Your idea</h2>
 
-      {MIND_MAP_GROUPS.map((group) => {
-        const sections = group.fromScript ? bigPictureSections : group.sections;
+      {/* Read-only goal box — platform + description copied from the create
+          step. Shown above the shortlist; not editable here. */}
+      {script && (
+        <div className="flex flex-col gap-2 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+          {script.platform && (
+            <span className="w-fit rounded-full bg-[var(--color-primary)] px-3 py-1 text-[11px] font-semibold text-white">
+              {platformLabel(script.platform)}
+            </span>
+          )}
+          <p className="text-sm text-gray-700">
+            {script.goal?.trim() || script.title}
+          </p>
+        </div>
+      )}
+
+      {MIND_MAP_GROUPS.filter((group) => !group.fromScript).map((group) => {
+        const sections = group.sections;
 
         return (
           <div key={group.hubId} className="flex flex-col gap-3">
@@ -159,8 +129,11 @@ export default function MindMapSidePanel() {
                       <button
                         key={`${sectionKey}-${item}`}
                         type="button"
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, group, item)}
                         onClick={() => spawnTopic(group, item)}
-                        className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-transform hover:-translate-y-0.5"
+                        title="Click to add, or drag onto the canvas"
+                        className="flex cursor-grab items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-transform hover:-translate-y-0.5 active:cursor-grabbing"
                         style={{
                           backgroundColor: group.leafBg,
                           color: group.leafText,

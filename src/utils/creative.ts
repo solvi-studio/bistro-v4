@@ -1,9 +1,21 @@
 import type {
   CreativeFolder,
   CreativeScript,
+  Platform,
   ScriptColor,
 } from "@/types/creative";
 import { storage } from "@/utils/storage";
+
+// Platforms offered in the create-project modal, with display labels.
+export const PLATFORMS: { id: Platform; label: string }[] = [
+  { id: "tiktok", label: "TikTok" },
+  { id: "youtube", label: "YouTube" },
+  { id: "instagram", label: "Instagram" },
+];
+
+export function platformLabel(platform: Platform | undefined): string {
+  return PLATFORMS.find((p) => p.id === platform)?.label ?? "";
+}
 
 const KEYS = {
   folders: "bistro_creative_folders",
@@ -44,13 +56,15 @@ export function saveScripts(scripts: CreativeScript[]): void {
 }
 
 export interface ScriptDraft {
-  purpose: string;
-  intro: string;
-  outro: string;
+  name: string;
+  goal: string;
+  platform: Platform | "";
 }
 
-// ── Craft-script draft persistence (per folder) ────────────────────────────
-// Keeps the in-progress answers so navigating away and back restores them.
+export const EMPTY_DRAFT: ScriptDraft = { name: "", goal: "", platform: "" };
+
+// ── Create-project draft persistence (per folder) ──────────────────────────
+// Keeps the in-progress modal answers so closing and reopening restores them.
 // Cleared on submit, when the draft becomes a real script.
 
 export function getDraft(folderId: string): ScriptDraft | null {
@@ -79,24 +93,19 @@ export function addScript(
     : (folders[0]?.id ?? "f-default");
 
   const existing = getScripts();
-  const firstLine = draft.purpose.trim().split("\n")[0]?.trim() ?? "";
-  const title =
-    firstLine.length > 0 ? firstLine.slice(0, 48) : "Untitled shotlist";
+  const name = draft.name.trim();
+  const title = name.length > 0 ? name.slice(0, 48) : "Untitled project";
 
   const script: CreativeScript = {
     id: `s-${Date.now()}`,
     title,
-    body: [draft.purpose, draft.intro, draft.outro]
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .join("\n\n"),
+    body: draft.goal.trim(),
     folderId: targetId,
     createdAt: new Date().toISOString(),
     emoji: "✨",
     colorTag: COLOR_CYCLE[existing.length % COLOR_CYCLE.length],
-    purpose: draft.purpose.trim(),
-    intro: draft.intro.trim(),
-    outro: draft.outro.trim(),
+    goal: draft.goal.trim(),
+    platform: draft.platform || undefined,
   };
 
   saveScripts([...existing, script]);

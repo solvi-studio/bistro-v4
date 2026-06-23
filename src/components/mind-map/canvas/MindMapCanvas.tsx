@@ -25,6 +25,12 @@ import {
   applyColorToNode,
   getNodeThemeColor,
 } from "@/components/mind-map/utils/nodeColors";
+import {
+  findGroup,
+  spawnTopicNode,
+  TOPIC_DND_MIME,
+  type TopicDragPayload,
+} from "@/components/mind-map/utils/spawnTopic";
 import { pickHandles } from "@/utils/mind-map-handles";
 import { loadCanvas, saveCanvas } from "@/utils/mind-map-store";
 import { exportMindMapGraph } from "@/utils/mindmap-export";
@@ -86,9 +92,11 @@ function CanvasInner() {
   const {
     screenToFlowPosition,
     deleteElements,
+    getNode,
     getNodes,
     getEdges,
     addNodes,
+    addEdges,
     getViewport,
     setViewport,
     getIntersectingNodes,
@@ -290,6 +298,38 @@ function CanvasInner() {
     router.push(`/summarise${query}`);
   }, [nodes, edges, router, mapId]);
 
+  // ── Drag-and-drop — drop a shortlist chip to spawn a topic at the cursor ───
+  const onDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes(TOPIC_DND_MIME)) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  }, []);
+
+  const onDrop = useCallback(
+    (e: React.DragEvent) => {
+      const raw = e.dataTransfer.getData(TOPIC_DND_MIME);
+      if (!raw) return;
+      e.preventDefault();
+      let payload: TopicDragPayload;
+      try {
+        payload = JSON.parse(raw) as TopicDragPayload;
+      } catch {
+        return;
+      }
+      const group = findGroup(payload.hubId);
+      if (!group) return;
+      const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+      spawnTopicNode(
+        { addNodes, addEdges, getNode, getNodes },
+        group,
+        payload.label,
+        position,
+      );
+    },
+    [screenToFlowPosition, addNodes, addEdges, getNode, getNodes],
+  );
+
   // ── Pane click — place sticky or textbox ──────────────────────────────────
   const onPaneClick = useCallback(
     (e: React.MouseEvent) => {
@@ -387,6 +427,8 @@ function CanvasInner() {
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onPaneClick={onPaneClick}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
         onNodeClick={eraserHandlers.onNodeClick}
         onNodeMouseEnter={eraserHandlers.onNodeMouseEnter}
         nodeTypes={nodeTypes}

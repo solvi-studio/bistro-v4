@@ -26,8 +26,9 @@ interface SummaryApiResponse {
 
 type SummariseStatus = "pending" | "done" | "error";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
-const SUMMARY_ENDPOINT = `${API_BASE}/api/v1/summary`;
+// Same-origin Next.js route handler that proxies to the backend server-side.
+// The real backend URL (API_URL) never reaches the browser.
+const SUMMARY_ENDPOINT = "/api/v1/summary";
 // Gemini summary + Cloud Run cold start can take well over a minute — keep this
 // comfortably under the Cloud Run request limit (300s) but long enough not to
 // abort a healthy-but-slow call.

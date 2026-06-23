@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import CreativeComposeClient from "@/components/creative/CreativeComposeClient";
+import CreateProjectModal from "@/components/creative/CreateProjectModal";
 
 export default function CreativeNewPage() {
   return (
     <Suspense fallback={null}>
-      <CreativeComposeClient />
+      <CreateProjectModal />
     </Suspense>
   );
 }
