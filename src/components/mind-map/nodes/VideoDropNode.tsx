@@ -16,10 +16,7 @@ import {
 } from "lucide-react";
 import { useCallback, useState } from "react";
 import QuickConnectArrows from "@/components/mind-map/canvas/QuickConnectArrows";
-import {
-  leafNodeStyle,
-  MIND_MAP_GROUPS,
-} from "@/components/mind-map/constants/topics";
+import { leafNodeStyle } from "@/components/mind-map/constants/topics";
 import { EDGE_MARKER } from "@/components/mind-map/edges/edgeTypes";
 import { pickHandles } from "@/utils/mind-map-handles";
 import {
@@ -52,18 +49,25 @@ export type VideoDropNodeType = Node<VideoDropData, "videoDrop">;
 const HANDLE_CLS =
   "!w-2.5 !h-2.5 !rounded-full !border-2 !border-white !bg-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-150";
 
-// The string[] result fields (excludes nodeId) — each feeds one hub.
+// The string[] result fields (excludes nodeId) — each is one category of ideas.
 type ResultListKey =
   | "bigPicture"
   | "toneAndMood"
   | "targetAudience"
   | "composition";
 
-const HUB_RESULTS: { hubId: string; key: ResultListKey }[] = [
-  { hubId: "hub-bigpicture", key: "bigPicture" },
-  { hubId: "hub-tone", key: "toneAndMood" },
-  { hubId: "hub-audience", key: "targetAudience" },
-  { hubId: "hub-composition", key: "composition" },
+// Category → leaf colour. Independent of the canvas hubs: video-analysis leaves
+// attach only to their own video block, never to a hub, so they don't need a hub
+// to exist (and won't connect to anything else on the canvas).
+const VIDEO_CATEGORIES: {
+  key: ResultListKey;
+  leafBg: string;
+  leafText: string;
+}[] = [
+  { key: "bigPicture", leafBg: "#fbe0e1", leafText: "#d6494e" },
+  { key: "composition", leafBg: "#e3ecfb", leafText: "#3b6fd4" },
+  { key: "toneAndMood", leafBg: "#ededed", leafText: "#4b5563" },
+  { key: "targetAudience", leafBg: "#fbeec6", leafText: "#b08400" },
 ];
 
 function truncate(text: string, max = 48): string {
@@ -85,11 +89,11 @@ export default function VideoDropNode({
   const [url, setUrl] = useState(data.tiktokUrl ?? "");
   const [prompt, setPrompt] = useState(data.userPrompt ?? "");
 
-  // Spawn each analysis result as a leaf with TWO edges: one back to this video
-  // block (provenance) and one to its category hub. Leaves are grouped per hub
-  // and laid out in an evenly spaced, collision-free column beside that hub
-  // (distributeBesideHub), so both edges read cleanly. De-duped against leaves
-  // already on this block so re-runs / cache hits don't pile up.
+  // Spawn each analysis result as a leaf with a SINGLE edge back to this video
+  // block (provenance) — never to a hub or any other node. Leaves are laid out
+  // in evenly spaced, collision-free columns beside the video block itself
+  // (distributeBesideHub anchored on `self`). De-duped against leaves already on
+  // this block so re-runs / cache hits don't pile up.
   const spawnResults = useCallback(
     (result: VideoMindmapResult): number => {
       const self = getNode(id);
@@ -114,20 +118,16 @@ export default function VideoDropNode({
       }
 
       let spawned = 0;
-      for (const { hubId, key } of HUB_RESULTS) {
-        const group = MIND_MAP_GROUPS.find((g) => g.hubId === hubId);
-        const hub = getNode(hubId);
-        if (!group || !hub) continue;
-
+      for (const { key, leafBg, leafText } of VIDEO_CATEGORIES) {
         // New labels for this category (after dedupe).
         const labels = result[key]
           .map((raw) => truncate(raw))
           .filter((label) => label && !seen.has(label));
         if (labels.length === 0) continue;
 
-        // Even, collision-free column beside this hub.
-        const positions = distributeBesideHub(hub, labels.length, occupied, {
-          dir: group.leafDir,
+        // Even, collision-free column beside the video block.
+        const positions = distributeBesideHub(self, labels.length, occupied, {
+          dir: 1,
           leafW,
           leafH,
         });
@@ -140,10 +140,10 @@ export default function VideoDropNode({
             type: "default",
             position: pos,
             data: { label },
-            style: leafNodeStyle(group.leafBg, group.leafText),
+            style: leafNodeStyle(leafBg, leafText),
           });
 
-          // Edge 1: video block → leaf (provenance).
+          // Single edge: video block → leaf (provenance only).
           const vid = pickHandles(self, leafBox(pos));
           addEdges({
             id: `e-vid-${nodeId}`,
@@ -151,19 +151,6 @@ export default function VideoDropNode({
             target: nodeId,
             sourceHandle: vid.sourceHandle,
             targetHandle: vid.targetHandle,
-            type: "labeled",
-            data: { arrowEnd: true },
-            markerEnd: EDGE_MARKER,
-          });
-
-          // Edge 2: category hub → leaf (matches the panel's spawnTopic).
-          const hubH = pickHandles(hub, leafBox(pos));
-          addEdges({
-            id: `e-hub-${nodeId}`,
-            source: hubId,
-            target: nodeId,
-            sourceHandle: hubH.sourceHandle,
-            targetHandle: hubH.targetHandle,
             type: "labeled",
             data: { arrowEnd: true },
             markerEnd: EDGE_MARKER,
