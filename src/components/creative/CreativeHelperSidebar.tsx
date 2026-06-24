@@ -8,6 +8,7 @@ import {
   RotateCcw,
   Workflow,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -17,6 +18,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { SplitContext } from "@/components/mind-map/canvas/ResizableSplit";
+import { getScripts } from "@/utils/creative";
 import {
   getSummaryStatus,
   subscribeSummaryStatus,
@@ -192,8 +194,11 @@ export default function CreativeHelperSidebar({
 
   // Carry the active idea (?script=<id>) across step navigation so switching
   // stages keeps the user in their current script instead of the default map.
-  const script = params.get("script");
-  const scriptQuery = script ? `?script=${encodeURIComponent(script)}` : "";
+  const scriptId = params.get("script");
+  const scriptQuery = scriptId ? `?script=${encodeURIComponent(scriptId)}` : "";
+  const scriptTitle = scriptId
+    ? (getScripts().find((s) => s.id === scriptId)?.title ?? null)
+    : null;
 
   // Tab mode uses the `active` prop; link mode derives it from the route.
   const activeIndex = onSelect
@@ -240,6 +245,7 @@ export default function CreativeHelperSidebar({
           locks={locks}
           iconOnly
         />
+
         <button
           type="button"
           onClick={rewatch}
@@ -254,14 +260,23 @@ export default function CreativeHelperSidebar({
 
   return (
     <aside
-      className={`flex h-full min-h-0 shrink-0 flex-col border-r border-gray-100 bg-white font-[var(--font-poppins)] ${
+      className={`relative z-10 flex h-full min-h-0 shrink-0 flex-col border-r border-gray-100 bg-white font-[var(--font-poppins)] ${
         embedded ? "w-full" : "w-[340px]"
       }`}
     >
       {/* Header — collapse button sits on the right, in normal flow. */}
       <div className="flex shrink-0 items-center border-b border-gray-100 px-5 py-4">
-        <h2 className="text-lg font-bold text-gray-800">
-          Your Creative Helper
+        <h2 className="flex items-center gap-2 text-lg font-bold text-gray-800">
+          {scriptTitle && (
+            <Image
+              src="/icon/glyphs-poly_sparkle.png"
+              alt=""
+              width={20}
+              height={20}
+              className="shrink-0"
+            />
+          )}
+          {scriptTitle ?? "Your Creative Helper"}
         </h2>
         {collapse && (
           <button

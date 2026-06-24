@@ -22,14 +22,11 @@ import { Save, Sparkles } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  applyColorToNode,
-  getNodeThemeColor,
-} from "@/components/mind-map/utils/nodeColors";
-import {
   findGroup,
   spawnTopicNode,
   TOPIC_DND_MIME,
   type TopicDragPayload,
+  VIDEO_DND_MIME,
 } from "@/components/mind-map/utils/spawnTopic";
 import { pickHandles } from "@/utils/mind-map-handles";
 import { loadCanvas, saveCanvas } from "@/utils/mind-map-store";
@@ -41,7 +38,7 @@ import CreativeHelperSidebar from "@/components/creative/CreativeHelperSidebar";
 import { EraserCursor } from "@/components/mind-map/canvas/EraserCursor";
 import MindMapSidePanel from "@/components/mind-map/canvas/MindMapSidePanel";
 import ResizableSplit from "@/components/mind-map/canvas/ResizableSplit";
-import Toolbar from "@/components/mind-map/canvas/Toolbar";
+// import Toolbar from "@/components/mind-map/canvas/Toolbar";
 import {
   INITIAL_EDGES,
   INITIAL_NODES,
@@ -92,11 +89,9 @@ function CanvasInner() {
   const {
     screenToFlowPosition,
     deleteElements,
-    getNode,
     getNodes,
     getEdges,
     addNodes,
-    addEdges,
     getViewport,
     setViewport,
     getIntersectingNodes,
@@ -261,23 +256,8 @@ function CanvasInner() {
           ),
         );
       }
-
-      // Dragged node adopts the color of the node it landed on.
-      const palette = getNodeThemeColor(target);
-      setNodes((ns) =>
-        ns.map((n) => {
-          if (n.id !== node.id) return n;
-          const patch = applyColorToNode(n, palette);
-          return {
-            ...n,
-            ...patch,
-            data: { ...n.data, ...(patch.data ?? {}) },
-            style: { ...n.style, ...(patch.style ?? {}) },
-          };
-        }),
-      );
     },
-    [getNodes, getEdges, setEdges, setNodes],
+    [getNodes, getEdges, setEdges],
   );
 
   // ── Manual save ────────────────────────────────────────────────────────────
@@ -300,7 +280,10 @@ function CanvasInner() {
 
   // ── Drag-and-drop — drop a shortlist chip to spawn a topic at the cursor ───
   const onDragOver = useCallback((e: React.DragEvent) => {
-    if (e.dataTransfer.types.includes(TOPIC_DND_MIME)) {
+    if (
+      e.dataTransfer.types.includes(TOPIC_DND_MIME) ||
+      e.dataTransfer.types.includes(VIDEO_DND_MIME)
+    ) {
       e.preventDefault();
       e.dataTransfer.dropEffect = "copy";
     }
@@ -308,9 +291,23 @@ function CanvasInner() {
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
+      e.preventDefault();
+      const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+
+      // Video Analysis node drop
+      if (e.dataTransfer.types.includes(VIDEO_DND_MIME)) {
+        addNodes({
+          id: `videoDrop-${Date.now()}`,
+          type: "videoDrop",
+          position,
+          data: { status: "idle" },
+        });
+        return;
+      }
+
+      // Shortlist chip drop
       const raw = e.dataTransfer.getData(TOPIC_DND_MIME);
       if (!raw) return;
-      e.preventDefault();
       let payload: TopicDragPayload;
       try {
         payload = JSON.parse(raw) as TopicDragPayload;
@@ -319,15 +316,9 @@ function CanvasInner() {
       }
       const group = findGroup(payload.hubId);
       if (!group) return;
-      const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-      spawnTopicNode(
-        { addNodes, addEdges, getNode, getNodes },
-        group,
-        payload.label,
-        position,
-      );
+      spawnTopicNode({ addNodes }, group, payload.label, position);
     },
-    [screenToFlowPosition, addNodes, addEdges, getNode, getNodes],
+    [screenToFlowPosition, addNodes],
   );
 
   // ── Pane click — place sticky or textbox ──────────────────────────────────
@@ -503,7 +494,7 @@ function CanvasRoot() {
             right={
               <>
                 <CanvasInner />
-                <Toolbar />
+                {/* <Toolbar /> */}
               </>
             }
           />

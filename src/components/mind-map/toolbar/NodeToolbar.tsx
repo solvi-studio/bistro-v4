@@ -26,7 +26,6 @@ import {
   SHAPE_ICONS,
   SHAPE_TYPES,
   type ShapeData,
-  ShapeType,
 } from "@/components/mind-map/nodes/ShapeNode";
 import {
   STICKY_COLORS,
@@ -172,7 +171,7 @@ function FontSizeRow({
 
   const commit = (raw: string) => {
     const n = parseInt(raw, 10);
-    if (!isNaN(n) && n >= 1 && n <= 200) onChange(n);
+    if (!Number.isNaN(n) && n >= 1 && n <= 200) onChange(n);
     else setInputVal(String(value));
   };
 
@@ -401,6 +400,14 @@ const TOPIC_COLORS = [
   { label: "White", value: "#ffffff" },
 ] as const;
 
+const TOPIC_TEXT_COLORS = [
+  { label: "Black", value: "#1a1a1a" },
+  { label: "Dark blue", value: "#1e3a8a" },
+  { label: "Dark red", value: "#7f1d1d" },
+  { label: "Dark green", value: "#14532d" },
+  { label: "White", value: "#ffffff" },
+] as const;
+
 const TOPIC_FONT_SIZES = [
   { label: "S", value: 12 },
   { label: "M", value: 14 },
@@ -414,6 +421,7 @@ function TopicControls({ id }: { id: string }) {
   const style = (getNode(id)?.style ?? {}) as React.CSSProperties;
   const bg =
     typeof style.background === "string" ? style.background : "#e3ecfb";
+  const textColor = typeof style.color === "string" ? style.color : "#1a1a1a";
   const fontSize = typeof style.fontSize === "number" ? style.fontSize : 12;
   const isLocked = ANCHOR_NODE_IDS.has(id);
 
@@ -426,6 +434,14 @@ function TopicControls({ id }: { id: string }) {
         value={bg}
         onChange={(background) => setStyle({ background })}
         presets={TOPIC_COLORS}
+      />
+
+      <Divider />
+
+      <ColorPickerRow
+        value={textColor}
+        onChange={(color) => setStyle({ color })}
+        presets={TOPIC_TEXT_COLORS}
       />
 
       <Divider />

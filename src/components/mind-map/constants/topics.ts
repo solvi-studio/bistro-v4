@@ -140,10 +140,9 @@ export function leafNodeStyle(bg: string, text: string): CSSProperties {
     color: text,
     border: "none",
     borderRadius: 999,
-    padding: "8px 16px",
-    fontSize: 12,
+    padding: "24px 32px",
+    fontSize: 14,
     fontWeight: 600,
-    // No maxWidth — lets the node be resized wider via the NodeResizer.
     boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
   };
 }

@@ -8,12 +8,9 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { useCallback } from "react";
+import { leafNodeStyle } from "@/components/mind-map/constants/topics";
 import { useTool } from "@/components/mind-map/context/ToolContext";
 import { EDGE_MARKER } from "@/components/mind-map/edges/edgeTypes";
-import {
-  applyColorToNode,
-  getNodeThemeColor,
-} from "@/components/mind-map/utils/nodeColors";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,12 +20,25 @@ type Direction = "top" | "right" | "bottom" | "left";
 
 type NodeDefaults = {
   data: Record<string, unknown>;
-  style: Record<string, unknown>;
+  style: React.CSSProperties;
   w: number;
   h: number;
 };
 
 const TYPE_DEFAULTS: Record<string, NodeDefaults> = {
+  default: {
+    data: { label: "Node" },
+    // Base style matches leafNodeStyle shape (bg/color overridden by applyColorToNode).
+    style: leafNodeStyle("#ededed", "#4b5563"),
+    w: 160,
+    h: 46,
+  },
+  scene: {
+    data: { label: "Scene" },
+    style: {},
+    w: 180,
+    h: 52,
+  },
   sticky: {
     data: { text: "", color: "#fef9c3", fontSize: 14 },
     style: { width: 160, height: 160 },
@@ -123,9 +133,11 @@ const DIR_CONFIG: Record<
 export default function QuickConnectArrows({
   id,
   selected,
+  dwelled = false,
 }: {
   id: string;
   selected: boolean;
+  dwelled?: boolean;
 }) {
   const { activeTool } = useTool();
   const { addNodes, addEdges, getNode } = useReactFlow();
@@ -152,21 +164,12 @@ export default function QuickConnectArrows({
 
       const newId = `${nodeType}-${Date.now()}`;
 
-      // New node adopts the color of the node it springs from.
-      const baseNode = {
+      addNodes({
         id: newId,
         type: nodeType,
         position: { x: source.position.x + dx, y: source.position.y + dy },
         data: { ...defaults.data },
         style: { ...defaults.style },
-      };
-      const colorPatch = applyColorToNode(baseNode, getNodeThemeColor(source));
-
-      addNodes({
-        ...baseNode,
-        ...colorPatch,
-        data: { ...baseNode.data, ...(colorPatch.data ?? {}) },
-        style: { ...baseNode.style, ...(colorPatch.style ?? {}) },
       });
 
       addEdges({
@@ -204,9 +207,9 @@ export default function QuickConnectArrows({
               "flex items-center justify-center",
               "text-gray-400 hover:bg-indigo-50 hover:border-indigo-400 hover:text-indigo-500",
               "transition-all nodrag nopan",
-              selected
+              selected || dwelled
                 ? "opacity-100 scale-100"
-                : "opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100",
+                : "opacity-0 scale-90",
               posClass,
             ].join(" ")}
           >

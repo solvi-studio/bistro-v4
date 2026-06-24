@@ -4,6 +4,7 @@ import { useReactFlow } from "@xyflow/react";
 import { GripVertical, HelpCircle, RotateCcw } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import CreativeFlowReminder from "@/components/creative/CreativeFlowReminder";
 import {
   MIND_MAP_GROUPS,
@@ -13,12 +14,15 @@ import {
   spawnTopicNode,
   TOPIC_DND_MIME,
   type TopicDragPayload,
+  VIDEO_DND_MIME,
 } from "@/components/mind-map/utils/spawnTopic";
 import { getScripts, platformLabel } from "@/utils/creative";
 import { loadCustomItems, saveCustomItems } from "@/utils/mind-map-store";
 
+import { PlatformIcon } from "../../creative/platformIcons";
+
 export default function MindMapSidePanel() {
-  const { addNodes, addEdges, getNode, getNodes } = useReactFlow();
+  const { addNodes } = useReactFlow();
   const router = useRouter();
   const params = useSearchParams();
   const scriptId = params.get("script");
@@ -55,10 +59,20 @@ export default function MindMapSidePanel() {
     return () => clearTimeout(t);
   }, [mapId, customItems]);
 
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guidePos, setGuidePos] = useState({ top: 0, left: 0 });
+  const guideBtnRef = useRef<HTMLButtonElement>(null);
+
+  function openGuide() {
+    const rect = guideBtnRef.current?.getBoundingClientRect();
+    if (rect) setGuidePos({ top: rect.top, left: rect.right + 8 });
+    setGuideOpen(true);
+  }
+
   // Click spawns at the hub's default stagger; drag (below) lets the cursor
   // decide placement. Both funnel through the shared spawn helper.
   function spawnTopic(group: MindMapGroup, label: string) {
-    spawnTopicNode({ addNodes, addEdges, getNode, getNodes }, group, label);
+    spawnTopicNode({ addNodes }, group, label);
   }
 
   function handleDragStart(
@@ -88,47 +102,58 @@ export default function MindMapSidePanel() {
     // Chrome (scroll, padding, heading bar) is owned by CreativeHelperSidebar;
     // this renders just the shortlist content nested in its tab content area.
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-2">
-        <h2 className="text-base font-bold text-gray-800">Your idea</h2>
-
-        {/* Guide tucked behind a small "?" — hover reveals the Creative Flow
-            reminder + Watch guide. Popover opens to the right of the button. */}
-        <div className="group relative">
-          <button
-            type="button"
-            aria-label="Show creative flow guide"
-            className="grid h-6 w-6 place-items-center rounded-full border border-gray-200 text-gray-400 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-          >
-            <HelpCircle size={14} />
-          </button>
-
-          {/* pl-2 bridges the gap so moving the cursor onto the card keeps it open. */}
-          <div className="invisible absolute left-full top-0 z-30 w-72 pl-2 opacity-0 transition-opacity group-hover:visible group-hover:opacity-100">
-            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-lg">
-              <CreativeFlowReminder />
-              <button
-                type="button"
-                onClick={() => router.push("/creative/guide?rewatch=1")}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-              >
-                <RotateCcw size={15} />
-                Watch guide
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Read-only goal box — platform + description copied from the create
           step. Shown above the shortlist; not editable here. */}
       {script && (
-        <div className="flex flex-col gap-2 rounded-2xl border border-gray-100 bg-gray-50 p-4">
-          {script.platform && (
-            <span className="w-fit rounded-full bg-[var(--color-primary)] px-3 py-1 text-[11px] font-semibold text-white">
-              {platformLabel(script.platform)}
-            </span>
-          )}
-          <p className="text-sm text-gray-700">
+        <div className="flex flex-col gap-4">
+          <div>
+            {script.platform && (
+              <div className="flex items-center gap-2">
+                <PlatformIcon platform={script.platform} size={20} />
+                <span className="text-sm font-semibold text-gray-700">
+                  {platformLabel(script.platform)}
+                </span>
+                <span className="ml-auto flex items-center gap-2">
+                  <button
+                    ref={guideBtnRef}
+                    type="button"
+                    aria-label="Show creative flow guide"
+                    onMouseEnter={openGuide}
+                    onMouseLeave={() => setGuideOpen(false)}
+                    className="grid h-6 w-6 place-items-center rounded-full border border-gray-200 text-gray-400 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                  >
+                    <HelpCircle size={14} />
+                  </button>
+
+                  {guideOpen &&
+                    createPortal(
+                      <div
+                        role="tooltip"
+                        onMouseEnter={() => setGuideOpen(true)}
+                        onMouseLeave={() => setGuideOpen(false)}
+                        style={{ top: guidePos.top, left: guidePos.left }}
+                        className="fixed z-[9999] w-72 rounded-2xl border border-gray-100 bg-white p-4 shadow-lg"
+                      >
+                        <CreativeFlowReminder />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            router.push("/creative/guide?rewatch=1")
+                          }
+                          className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                        >
+                          <RotateCcw size={15} />
+                          Watch guide
+                        </button>
+                      </div>,
+                      document.body,
+                    )}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <p className="flex flex-col gap-2 rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm font-semibold text-gray-700">
             {script.goal?.trim() || script.title}
           </p>
         </div>
@@ -224,6 +249,43 @@ export default function MindMapSidePanel() {
           </div>
         );
       })}
+
+      {/* Video Analysis — draggable card that drops a VideoDropNode onto canvas */}
+      <div className="flex flex-col gap-3">
+        <h3 className="text-sm font-bold text-gray-700">Video Analysis</h3>
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: draggable card */}
+        <div
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.setData(VIDEO_DND_MIME, "1");
+            e.dataTransfer.effectAllowed = "copy";
+          }}
+          className="flex cursor-grab flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-white px-4 py-5 text-center transition-colors hover:border-gray-400 active:cursor-grabbing"
+        >
+          <GripVertical size={13} className="shrink-0 text-gray-400" />
+          <p className="text-xs text-gray-400 leading-relaxed">
+            Drag &amp; drop your inspiration videos, your past posts or whatever
+            you want to replicate in your next idea
+          </p>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-gray-400"
+            aria-hidden="true"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+        </div>
+      </div>
     </div>
   );
 }
