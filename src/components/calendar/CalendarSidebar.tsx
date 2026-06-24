@@ -2,7 +2,7 @@
 
 import { Calendar, Plus } from "lucide-react";
 import type { CreativeScript } from "@/types/creative";
-import { colorFor } from "@/utils/calendar";
+import { colorForScript } from "@/utils/calendar";
 import MiniMonth from "./MiniMonth";
 
 interface Props {
@@ -54,7 +54,7 @@ export default function CalendarSidebar({
         <div className="flex flex-col gap-2">
           {scripts.map((s) => {
             const active = activeScriptIds.has(s.id);
-            const c = colorFor(s.colorTag);
+            const c = colorForScript(s.id);
             return (
               <button
                 key={s.id}

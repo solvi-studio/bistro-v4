@@ -21,7 +21,6 @@ import {
   getSummaryStatus,
   subscribeSummaryStatus,
 } from "@/utils/summarise-service";
-import CreativeFlowReminder from "./CreativeFlowReminder";
 
 // Reactive summary status — drives which downstream stages are unlocked.
 function useSummaryStatus() {
@@ -178,7 +177,6 @@ function StepTabs({
 export default function CreativeHelperSidebar({
   active,
   onSelect,
-  showReminder = true,
   children,
   embedded = false,
 }: Props) {
@@ -295,7 +293,7 @@ export default function CreativeHelperSidebar({
       )}
 
       {/* Flow reminder + watch guide (watch guide always visible) */}
-      <div
+      {/* <div
         className={`flex shrink-0 flex-col px-5 pb-5 ${children ? "" : "flex-1"}`}
       >
         {showReminder && <CreativeFlowReminder />}
@@ -307,7 +305,7 @@ export default function CreativeHelperSidebar({
           <RotateCcw size={15} />
           Watch guide
         </button>
-      </div>
+      </div> */}
     </aside>
   );
 }

@@ -5,6 +5,7 @@ import type { CreativeScript } from "@/types/creative";
 import type { EnrichedCalendarEvent } from "@/types/plan";
 import { addEvent, deleteEvent, getAllEvents } from "@/utils/calendar";
 import { getScripts } from "@/utils/creative";
+import { subscribeDataChange } from "@/utils/dataSync";
 import CalendarSidebar from "./CalendarSidebar";
 import CreateEventModal from "./CreateEventModal";
 import { fromISO, startOfWeek, toISO } from "./dateUtils";
@@ -20,13 +21,27 @@ export default function CalendarPageClient() {
   const [creating, setCreating] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Load folders + aggregated events after mount (storage is client-only).
+  // Load folders + aggregated events after mount (storage is client-only), and
+  // re-read whenever another view (plan board, etc.) writes.
   useEffect(() => {
     const s = getScripts();
     setScripts(s);
     setActiveScriptIds(new Set(s.map((x) => x.id)));
     setEvents(getAllEvents());
     setMounted(true);
+
+    const unsubscribe = subscribeDataChange(() => {
+      const next = getScripts();
+      setScripts(next);
+      // Keep existing filter choices; default-show any newly added folder.
+      setActiveScriptIds((prev) => {
+        const ids = new Set(prev);
+        for (const x of next) if (!ids.has(x.id)) ids.add(x.id);
+        return ids;
+      });
+      setEvents(getAllEvents());
+    });
+    return unsubscribe;
   }, []);
 
   function refresh() {

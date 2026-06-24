@@ -1,9 +1,10 @@
 "use client";
 
 import { useReactFlow } from "@xyflow/react";
-import { GripVertical, Plus } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { GripVertical, HelpCircle, RotateCcw } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import CreativeFlowReminder from "@/components/creative/CreativeFlowReminder";
 import {
   MIND_MAP_GROUPS,
   type MindMapGroup,
@@ -18,6 +19,7 @@ import { loadCustomItems, saveCustomItems } from "@/utils/mind-map-store";
 
 export default function MindMapSidePanel() {
   const { addNodes, addEdges, getNode, getNodes } = useReactFlow();
+  const router = useRouter();
   const params = useSearchParams();
   const scriptId = params.get("script");
   const mapId = scriptId ?? "default";
@@ -30,9 +32,9 @@ export default function MindMapSidePanel() {
     [scriptId],
   );
 
-  // Which section's "Add Your Own" input is open, and its draft value.
-  const [addingKey, setAddingKey] = useState<string | null>(null);
-  const [addValue, setAddValue] = useState("");
+  // "Add Your Own" disabled for now — state kept commented for later re-enable.
+  // const [addingKey, setAddingKey] = useState<string | null>(null);
+  // const [addValue, setAddValue] = useState("");
   // User-added topics, kept in the panel as selectable chips (per section).
   // They only land on the mind map when their chip is pressed. Persisted per
   // map so the shortlist survives leaving and returning to the canvas.
@@ -70,22 +72,52 @@ export default function MindMapSidePanel() {
   }
 
   // Add the typed topic to the section's chip list — does NOT spawn a node.
-  function handleAddSubmit(sectionKey: string) {
-    const text = addValue.trim();
-    if (!text) return;
-    setCustomItems((prev) => ({
-      ...prev,
-      [sectionKey]: [...(prev[sectionKey] ?? []), text],
-    }));
-    setAddValue("");
-    setAddingKey(null);
-  }
+  // Disabled for now along with the "Add Your Own" UI; kept for later re-enable.
+  // function handleAddSubmit(sectionKey: string) {
+  //   const text = addValue.trim();
+  //   if (!text) return;
+  //   setCustomItems((prev) => ({
+  //     ...prev,
+  //     [sectionKey]: [...(prev[sectionKey] ?? []), text],
+  //   }));
+  //   setAddValue("");
+  //   setAddingKey(null);
+  // }
 
   return (
     // Chrome (scroll, padding, heading bar) is owned by CreativeHelperSidebar;
     // this renders just the shortlist content nested in its tab content area.
     <div className="flex flex-col gap-6">
-      <h2 className="text-base font-bold text-gray-800">Your idea</h2>
+      <div className="flex items-center gap-2">
+        <h2 className="text-base font-bold text-gray-800">Your idea</h2>
+
+        {/* Guide tucked behind a small "?" — hover reveals the Creative Flow
+            reminder + Watch guide. Popover opens to the right of the button. */}
+        <div className="group relative">
+          <button
+            type="button"
+            aria-label="Show creative flow guide"
+            className="grid h-6 w-6 place-items-center rounded-full border border-gray-200 text-gray-400 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+          >
+            <HelpCircle size={14} />
+          </button>
+
+          {/* pl-2 bridges the gap so moving the cursor onto the card keeps it open. */}
+          <div className="invisible absolute left-full top-0 z-30 w-72 pl-2 opacity-0 transition-opacity group-hover:visible group-hover:opacity-100">
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-lg">
+              <CreativeFlowReminder />
+              <button
+                type="button"
+                onClick={() => router.push("/creative/guide?rewatch=1")}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+              >
+                <RotateCcw size={15} />
+                Watch guide
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Read-only goal box — platform + description copied from the create
           step. Shown above the shortlist; not editable here. */}
@@ -148,6 +180,7 @@ export default function MindMapSidePanel() {
                     ),
                   )}
 
+                  {/* "Add Your Own" disabled for now — kept for later re-enable.
                   {section.allowAdd &&
                     (addingKey === sectionKey ? (
                       <div className="flex gap-1.5">
@@ -184,6 +217,7 @@ export default function MindMapSidePanel() {
                         Add Your Own
                       </button>
                     ))}
+                  */}
                 </div>
               );
             })}

@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { useState } from "react";
 import type { CreativeScript } from "@/types/creative";
-import { colorFor } from "@/utils/calendar";
+import { colorForScript } from "@/utils/calendar";
 
 interface Props {
   scripts: CreativeScript[];
@@ -118,7 +118,7 @@ export default function CreateEventModal({
 
             <div className="mt-1 flex items-center gap-2">
               <span
-                className={`h-3 w-3 rounded-full ${colorFor(scripts.find((s) => s.id === scriptId)?.colorTag).dot}`}
+                className={`h-3 w-3 rounded-full ${colorForScript(scriptId).dot}`}
               />
               <button
                 type="button"

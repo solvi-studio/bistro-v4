@@ -1,7 +1,7 @@
 "use client";
 
 import type { EnrichedCalendarEvent } from "@/types/plan";
-import { colorFor } from "@/utils/calendar";
+import { colorForScript } from "@/utils/calendar";
 import { DOW_SHORT, MONTHS, toISO, weekDays } from "./dateUtils";
 
 interface Props {
@@ -69,7 +69,7 @@ export default function WeekGrid({
                 }`}
               >
                 {dayEvents.map((ev) => {
-                  const c = colorFor(ev.colorTag);
+                  const c = colorForScript(ev.scriptId);
                   return (
                     <div
                       key={ev.id}

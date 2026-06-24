@@ -1,6 +1,7 @@
 import type { CreativeScript } from "@/types/creative";
 import type { CalendarEvent, EnrichedCalendarEvent } from "@/types/plan";
 import { getScripts } from "@/utils/creative";
+import { notifyDataChange } from "@/utils/dataSync";
 import { getPlanTasks } from "@/utils/plan";
 import { storage } from "@/utils/storage";
 
@@ -18,6 +19,8 @@ export function loadEvents(scriptId: string): CalendarEvent[] {
 
 export function saveEvents(scriptId: string, events: CalendarEvent[]): void {
   storage.write(key(scriptId), events);
+  // Tell other mounted views (e.g. the plan page) to re-read.
+  notifyDataChange();
 }
 
 export function addEvent(
@@ -81,6 +84,75 @@ const COLORS: Record<"blue" | "yellow" | "pink", ColorClasses> = {
 
 export function colorFor(tag?: string): ColorClasses {
   return COLORS[tag as "blue" | "yellow" | "pink"] ?? COLORS.blue;
+}
+
+// ── Per-folder distinct colour ─────────────────────────────────────────────
+// The 3-colour folder tag isn't enough to tell folders apart on the shared
+// calendar (two "post-production" tasks from different folders looked identical).
+// Hash each folder's id onto a wider fixed palette so every folder gets a
+// stable, distinctive colour — collisions only past 10 folders.
+const SCRIPT_PALETTE: ColorClasses[] = [
+  {
+    chip: "bg-blue-100 text-blue-700",
+    block: "bg-blue-100 border-blue-300 text-blue-800",
+    dot: "bg-blue-400",
+  },
+  {
+    chip: "bg-amber-100 text-amber-800",
+    block: "bg-amber-100 border-amber-300 text-amber-900",
+    dot: "bg-amber-400",
+  },
+  {
+    chip: "bg-rose-100 text-rose-700",
+    block: "bg-rose-100 border-rose-300 text-rose-800",
+    dot: "bg-rose-400",
+  },
+  {
+    chip: "bg-emerald-100 text-emerald-700",
+    block: "bg-emerald-100 border-emerald-300 text-emerald-800",
+    dot: "bg-emerald-400",
+  },
+  {
+    chip: "bg-violet-100 text-violet-700",
+    block: "bg-violet-100 border-violet-300 text-violet-800",
+    dot: "bg-violet-400",
+  },
+  {
+    chip: "bg-cyan-100 text-cyan-700",
+    block: "bg-cyan-100 border-cyan-300 text-cyan-800",
+    dot: "bg-cyan-400",
+  },
+  {
+    chip: "bg-orange-100 text-orange-700",
+    block: "bg-orange-100 border-orange-300 text-orange-800",
+    dot: "bg-orange-400",
+  },
+  {
+    chip: "bg-fuchsia-100 text-fuchsia-700",
+    block: "bg-fuchsia-100 border-fuchsia-300 text-fuchsia-800",
+    dot: "bg-fuchsia-400",
+  },
+  {
+    chip: "bg-teal-100 text-teal-700",
+    block: "bg-teal-100 border-teal-300 text-teal-800",
+    dot: "bg-teal-400",
+  },
+  {
+    chip: "bg-indigo-100 text-indigo-700",
+    block: "bg-indigo-100 border-indigo-300 text-indigo-800",
+    dot: "bg-indigo-400",
+  },
+];
+
+// djb2 — stable hash so a folder keeps the same colour across reloads.
+function hashStr(s: string): number {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+export function colorForScript(scriptId: string): ColorClasses {
+  return SCRIPT_PALETTE[hashStr(scriptId) % SCRIPT_PALETTE.length];
 }
 
 // ── Aggregation (pure — unit-tested) ───────────────────────────────────────

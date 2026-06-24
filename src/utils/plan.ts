@@ -1,5 +1,6 @@
 import type { PlanTask } from "@/types/plan";
 import type { ConceptMeta, ShotData } from "@/types/summarise";
+import { notifyDataChange } from "@/utils/dataSync";
 
 const KEYS = {
   summarise: "bistro_summarise_data",
@@ -210,6 +211,8 @@ export function getDefaultPlanTasks(): PlanTask[] {
 
 export function savePlanTasks(scriptId: string, tasks: PlanTask[]): void {
   safeSet(tasksKey(scriptId), tasks);
+  // Scheduled-task dates feed the shared calendar — notify other views.
+  notifyDataChange();
 }
 
 export function getSummariseData(): { meta: ConceptMeta; shots: ShotData[] } {

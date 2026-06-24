@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { CalendarEvent, PlanTask } from "@/types/plan";
 import { loadEvents } from "@/utils/calendar";
+import { subscribeDataChange } from "@/utils/dataSync";
 import {
   getDefaultPlanTasks,
   getPlanTasks,
@@ -32,6 +33,13 @@ export default function PlanPageClient() {
     setEvents(loadEvents(scriptId));
     setProjectName(getSummariseData().meta.projectName);
     setMounted(true);
+
+    // Re-read when another view (the global calendar, etc.) writes events/tasks.
+    const unsubscribe = subscribeDataChange(() => {
+      setTasks(getPlanTasks(scriptId));
+      setEvents(loadEvents(scriptId));
+    });
+    return unsubscribe;
   }, [scriptId]);
 
   function handleTasksUpdate(updated: PlanTask[]) {
