@@ -1,8 +1,12 @@
 "use client";
 
-import { Bell, Calendar, Clock, ChevronsRight, MapPin, X } from "lucide-react";
+import { ChevronsRight } from "lucide-react";
+import { useState } from "react";
 import type { EnrichedCalendarEvent } from "@/types/plan";
-import { durationLabel, fmtDateLong, fmtTime, fromISO } from "./dateUtils";
+import EventLocationEditor from "./EventLocationEditor";
+import EventNotesEditor from "./EventNotesEditor";
+import EventReminders from "./EventReminders";
+import EventTimeEditor from "./EventTimeEditor";
 
 const PHASE_LABEL: Record<string, string> = {
   pre: "Pre-Production",
@@ -10,15 +14,21 @@ const PHASE_LABEL: Record<string, string> = {
   post: "Post-Production",
 };
 
-const DEFAULT_REMINDERS = ["1 hour before", "1 day before"];
-
 interface Props {
   event: EnrichedCalendarEvent;
   onClose: () => void;
+  onUpdate: (updated: EnrichedCalendarEvent) => void;
 }
 
-export default function EventDetailPanel({ event, onClose }: Props) {
-  const date = fromISO(event.date);
+export default function EventDetailPanel({ event, onClose, onUpdate }: Props) {
+  // Local draft — kept in sync via key remount (CalendarPageClient passes key={event.id})
+  const [draft, setDraft] = useState<EnrichedCalendarEvent>(event);
+
+  function patch(updates: Partial<EnrichedCalendarEvent>) {
+    const updated = { ...draft, ...updates };
+    setDraft(updated);
+    onUpdate(updated);
+  }
 
   return (
     <aside className="flex w-85 shrink-0 flex-col border-l border-gray-100 bg-white p-5 overflow-y-auto font-(--font-poppins)">
@@ -38,95 +48,50 @@ export default function EventDetailPanel({ event, onClose }: Props) {
       {/* Title */}
       <div className="mb-1">
         <p className="text-base font-semibold leading-snug text-gray-900">
-          <span className="text-amber-500">[{event.scriptTitle}]</span>{" "}
-          {event.title}
+          <span className="text-amber-500">[{draft.scriptTitle}]</span>{" "}
+          {draft.title}
         </p>
       </div>
 
-      {event.phase && (
+      {draft.phase && (
         <span className="mb-3 inline-block text-[11px] font-medium text-gray-400">
-          {PHASE_LABEL[event.phase]}
+          {PHASE_LABEL[draft.phase]}
         </span>
       )}
 
       <div className="mb-4 border-t border-gray-100" />
 
-      {/* Details */}
-      <div className="mb-4 flex flex-col gap-3">
-        {event.time && (
-          <div className="flex items-center gap-3 text-sm text-gray-700">
-            <Clock size={15} className="shrink-0 text-gray-400" />
-            <span>
-              {fmtTime(event.time)}
-              {event.endTime && (
-                <>
-                  {" "}
-                  <span className="mx-1 text-gray-400">→</span>{" "}
-                  {fmtTime(event.endTime)}
-                  {"  "}
-                  <span className="text-gray-400">
-                    {durationLabel(event.time, event.endTime)}
-                  </span>
-                </>
-              )}
-            </span>
-          </div>
-        )}
+      {/* Time + Date */}
+      <div className="mb-4">
+        <EventTimeEditor
+          event={draft}
+          onChange={(p) => patch(p)}
+        />
+      </div>
 
-        <div className="flex items-center gap-3 text-sm text-gray-700">
-          <Calendar size={15} className="shrink-0 text-gray-400" />
-          <span>{fmtDateLong(date)}</span>
-        </div>
-
-        <div className="flex items-center gap-3 text-sm text-gray-400">
-          <MapPin size={15} className="shrink-0" />
-          <span>Add location</span>
-        </div>
+      {/* Location */}
+      <div className="mb-4">
+        <EventLocationEditor
+          location={draft.location}
+          onChange={(location) => patch({ location })}
+        />
       </div>
 
       <div className="mb-4 border-t border-dashed border-gray-200" />
 
       {/* Notes */}
       <div className="mb-5">
-        <div className="min-h-30 rounded-lg border border-dashed border-gray-300 p-3">
-          {event.notes.length > 0 ? (
-            <ul className="flex flex-col gap-1">
-              {event.notes.map((n, i) => (
-                <li key={i} className="text-sm text-gray-700">
-                  {n}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <span className="text-sm text-gray-400">Add Notes</span>
-          )}
-        </div>
+        <EventNotesEditor
+          notes={draft.notes}
+          onChange={(notes) => patch({ notes })}
+        />
       </div>
 
       {/* Reminders */}
-      <div>
-        <div className="mb-2 flex items-center gap-2">
-          <Bell size={15} className="text-gray-400" />
-          <span className="text-sm font-medium text-gray-700">Reminders</span>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          {DEFAULT_REMINDERS.map((label) => (
-            <div
-              key={label}
-              className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-1.5 text-xs text-gray-700"
-            >
-              <span>{label}</span>
-              <button
-                type="button"
-                aria-label={`Remove ${label}`}
-                className="text-red-400 hover:text-red-600"
-              >
-                <X size={12} />
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
+      <EventReminders
+        reminders={draft.reminders ?? []}
+        onChange={(reminders) => patch({ reminders })}
+      />
     </aside>
   );
 }

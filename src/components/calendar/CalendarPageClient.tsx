@@ -8,7 +8,8 @@ import type {
   EnrichedCalendarEvent,
   PlanPhase,
 } from "@/types/plan";
-import { addEvent, deleteEvent, getAllEvents } from "@/utils/calendar";
+import { addEvent, deleteEvent, getAllEvents, updateEvent } from "@/utils/calendar";
+import type { CalendarEvent } from "@/types/plan";
 import { getScripts } from "@/utils/creative";
 import { subscribeDataChange } from "@/utils/dataSync";
 import CalendarSidebar from "./CalendarSidebar";
@@ -263,8 +264,15 @@ export default function CalendarPageClient() {
       {/* Event detail panel */}
       {selectedEvent && (
         <EventDetailPanel
+          key={selectedEvent.id}
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
+          onUpdate={(updated) => {
+            // Strip enriched-only fields before persisting
+            const { scriptTitle, colorTag, taskId, phase, ...base } = updated;
+            updateEvent(updated.scriptId, base as CalendarEvent);
+            setSelectedEvent(updated);
+          }}
         />
       )}
 

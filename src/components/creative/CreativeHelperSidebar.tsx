@@ -211,11 +211,27 @@ export default function CreativeHelperSidebar({
   const [guideOpen, setGuideOpen] = useState(false);
   const [guidePos, setGuidePos] = useState({ top: 0, left: 0 });
   const guideBtnRef = useRef<HTMLButtonElement>(null);
+  const guideCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function openGuide() {
+    if (guideCloseTimer.current) {
+      clearTimeout(guideCloseTimer.current);
+      guideCloseTimer.current = null;
+    }
     const rect = guideBtnRef.current?.getBoundingClientRect();
     if (rect) setGuidePos({ top: rect.top, left: rect.right + 8 });
     setGuideOpen(true);
+  }
+
+  function scheduleCloseGuide() {
+    guideCloseTimer.current = setTimeout(() => setGuideOpen(false), 1500);
+  }
+
+  function cancelCloseGuide() {
+    if (guideCloseTimer.current) {
+      clearTimeout(guideCloseTimer.current);
+      guideCloseTimer.current = null;
+    }
   }
 
   // Tab mode uses the `active` prop; link mode derives it from the route.
@@ -333,7 +349,7 @@ export default function CreativeHelperSidebar({
                   type="button"
                   aria-label="Show creative flow guide"
                   onMouseEnter={openGuide}
-                  onMouseLeave={() => setGuideOpen(false)}
+                  onMouseLeave={scheduleCloseGuide}
                   className="grid h-6 w-6 place-items-center rounded-full border border-gray-200 text-gray-400 transition-colors hover:border-primary hover:text-primary"
                 >
                   <HelpCircle size={14} />
@@ -342,8 +358,8 @@ export default function CreativeHelperSidebar({
                   createPortal(
                     <div
                       role="tooltip"
-                      onMouseEnter={() => setGuideOpen(true)}
-                      onMouseLeave={() => setGuideOpen(false)}
+                      onMouseEnter={cancelCloseGuide}
+                      onMouseLeave={scheduleCloseGuide}
                       style={{ top: guidePos.top, left: guidePos.left }}
                       className="fixed z-9999 w-72 rounded-2xl border border-gray-100 bg-white p-4 shadow-lg"
                     >
