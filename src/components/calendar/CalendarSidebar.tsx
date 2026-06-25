@@ -40,12 +40,12 @@ export default function CalendarSidebar({
   onCollapse,
 }: Props) {
   return (
-    <aside className="flex w-[240px] shrink-0 flex-col gap-5 overflow-y-auto p-4">
+    <aside className="flex w-60 shrink-0 flex-col gap-5 overflow-y-auto p-4">
       <div className="flex items-center justify-between">
         <button
           type="button"
           onClick={onCreate}
-          className="flex items-center gap-1.5 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)]"
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-(--color-primary-hover)"
         >
           Create <Plus size={15} />
         </button>

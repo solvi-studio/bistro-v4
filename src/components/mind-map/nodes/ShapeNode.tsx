@@ -307,7 +307,7 @@ export default function ShapeNode({
           style={{ fontSize: data.fontSize ?? 14 }}
           className={[
             "absolute inset-0 flex items-center justify-center",
-            "px-3 py-2 text-center leading-snug text-gray-800 break-words whitespace-pre-wrap",
+            "px-3 py-2 text-center leading-snug text-gray-800 wrap-break-word whitespace-pre-wrap",
             "focus:outline-none",
             isEditing ? "nodrag nopan cursor-text" : "cursor-default",
             !data.text && !isEditing ? "text-gray-400" : "",

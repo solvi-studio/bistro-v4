@@ -62,7 +62,7 @@ export default function MonthGrid({
             <div
               key={iso}
               onClick={() => onSelectDay(iso)}
-              className={`min-h-[80px] cursor-pointer bg-white p-1.5 transition-colors hover:bg-gray-50 ${
+              className={`min-h-20 cursor-pointer bg-white p-1.5 transition-colors hover:bg-gray-50 ${
                 isSelected ? "ring-2 ring-inset ring-indigo-400" : ""
               }`}
             >

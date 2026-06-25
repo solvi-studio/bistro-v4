@@ -20,7 +20,7 @@ function Header() {
       {COLUMNS.map((col) => (
         <span
           key={col}
-          className="text-sm font-semibold text-gray-700 font-[var(--font-poppins)]"
+          className="text-sm font-semibold text-gray-700 font-(--font-poppins)"
         >
           {col}
         </span>
@@ -31,7 +31,7 @@ function Header() {
 
 export default function ShotTable({ shots }: Props) {
   return (
-    <div className="min-w-[860px]">
+    <div className="min-w-215">
       <Header />
       {shots.map((shot, i) => (
         <ShotTableRow

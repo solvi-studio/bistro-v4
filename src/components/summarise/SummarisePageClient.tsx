@@ -90,14 +90,14 @@ export default function SummarisePageClient() {
               running, then try again.
             </p>
             {errorMsg && (
-              <p className="mt-2 max-w-md text-xs text-gray-400 break-words">
+              <p className="mt-2 max-w-md text-xs text-gray-400 wrap-break-word">
                 {errorMsg}
               </p>
             )}
             <button
               type="button"
               onClick={() => router.push(`/mind-map${scriptQuery}`)}
-              className="mt-6 px-6 py-2.5 rounded-full bg-[var(--color-primary)] text-white text-sm hover:bg-[var(--color-primary-hover)] transition-colors"
+              className="mt-6 px-6 py-2.5 rounded-full bg-primary text-white text-sm hover:bg-(--color-primary-hover) transition-colors"
               style={{ fontWeight: 600 }}
             >
               Back to Canvas
@@ -121,7 +121,7 @@ export default function SummarisePageClient() {
               <button
                 type="button"
                 onClick={() => router.push(`/plan${scriptQuery}`)}
-                className="px-6 py-2.5 rounded-full bg-[var(--color-primary)] text-white text-sm hover:bg-[var(--color-primary-hover)] transition-colors"
+                className="px-6 py-2.5 rounded-full bg-primary text-white text-sm hover:bg-(--color-primary-hover) transition-colors"
                 style={{ fontWeight: 600 }}
               >
                 Confirm

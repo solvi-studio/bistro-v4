@@ -12,7 +12,7 @@ const BackgroundCanvas = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="fixed inset-0 bg-gradient-to-br from-indigo-50 to-purple-50" />
+      <div className="fixed inset-0 bg-linear-to-br from-indigo-50 to-purple-50" />
     ),
   },
 );

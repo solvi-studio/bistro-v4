@@ -268,7 +268,7 @@ export default function CreativeHelperSidebar({
           type="button"
           onClick={rewatch}
           aria-label="Watch guide"
-          className="mt-auto grid h-9 w-9 place-items-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+          className="mt-auto grid h-9 w-9 place-items-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:border-primary hover:text-primary"
         >
           <RotateCcw size={15} />
         </button>
@@ -278,8 +278,8 @@ export default function CreativeHelperSidebar({
 
   return (
     <aside
-      className={`relative z-10 flex h-full min-h-0 shrink-0 flex-col border-r border-gray-100 bg-white font-[var(--font-poppins)] ${
-        embedded ? "w-full" : "w-[340px]"
+      className={`relative z-10 flex h-full min-h-0 shrink-0 flex-col border-r border-gray-100 bg-white font-(--font-poppins) ${
+        embedded ? "w-full" : "w-85"
       }`}
     >
       {/* Header — collapse button sits on the right, in normal flow. */}
@@ -334,7 +334,7 @@ export default function CreativeHelperSidebar({
                   aria-label="Show creative flow guide"
                   onMouseEnter={openGuide}
                   onMouseLeave={() => setGuideOpen(false)}
-                  className="grid h-6 w-6 place-items-center rounded-full border border-gray-200 text-gray-400 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                  className="grid h-6 w-6 place-items-center rounded-full border border-gray-200 text-gray-400 transition-colors hover:border-primary hover:text-primary"
                 >
                   <HelpCircle size={14} />
                 </button>
@@ -345,13 +345,13 @@ export default function CreativeHelperSidebar({
                       onMouseEnter={() => setGuideOpen(true)}
                       onMouseLeave={() => setGuideOpen(false)}
                       style={{ top: guidePos.top, left: guidePos.left }}
-                      className="fixed z-[9999] w-72 rounded-2xl border border-gray-100 bg-white p-4 shadow-lg"
+                      className="fixed z-9999 w-72 rounded-2xl border border-gray-100 bg-white p-4 shadow-lg"
                     >
                       <CreativeFlowReminder />
                       <button
                         type="button"
                         onClick={() => router.push("/creative/guide?rewatch=1")}
-                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:border-primary hover:text-primary"
                       >
                         <RotateCcw size={15} />
                         Watch guide

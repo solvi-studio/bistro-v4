@@ -86,13 +86,13 @@ export default function PlanPageClient() {
 
   return (
     <div
-      className="flex flex-col h-full font-[var(--font-poppins)] overflow-hidden"
+      className="flex flex-col h-full font-(--font-poppins) overflow-hidden"
       style={{ background: "#FAFAFB" }}
     >
       {/* Header */}
       <div className="px-8 pt-7 pb-4 shrink-0">
-        <div className="flex gap-3 flex flex-row items-start gap-5">
-          <h1 className="text-2xl font-[var(--font-display)] text-gray-800">
+        <div className="flex flex-row items-start gap-5">
+          <h1 className="text-2xl font-(--font-display) text-gray-800">
             Plan your idea
           </h1>
 
@@ -110,7 +110,7 @@ export default function PlanPageClient() {
               ? "Default tasks already added"
               : "Generate the default task list"
           }
-          className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary)] px-3.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)] disabled:cursor-default disabled:opacity-60 disabled:hover:bg-[var(--color-primary)]"
+          className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-(--color-primary-hover) disabled:cursor-default disabled:opacity-60 disabled:hover:bg-primary"
         >
           <Sparkles size={14} />
           {projectName}

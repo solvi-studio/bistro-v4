@@ -60,7 +60,7 @@ function sortKey(t: string | null) {
 export default function DayScheduleCard({ event, tasks, date }: Props) {
   if (!date) {
     return (
-      <div className="flex-1 min-h-[200px] rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-sm text-gray-400">
+      <div className="flex-1 min-h-50 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-sm text-gray-400">
         Select a day to see details
       </div>
     );
@@ -108,7 +108,7 @@ export default function DayScheduleCard({ event, tasks, date }: Props) {
   }
 
   return (
-    <div className="flex-1 min-h-[200px] rounded-2xl bg-white border border-gray-100 p-6 flex gap-8 items-start">
+    <div className="flex-1 min-h-50 rounded-2xl bg-white border border-gray-100 p-6 flex gap-8 items-start">
       {/* Date display */}
       <div className="shrink-0 flex flex-col gap-0.5 pt-1">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -121,7 +121,7 @@ export default function DayScheduleCard({ event, tasks, date }: Props) {
       <div className="w-px self-stretch bg-gray-100 shrink-0" />
 
       {/* Timeline */}
-      <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-y-auto max-h-[260px]">
+      <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-y-auto max-h-65">
         {hasContent ? (
           groups.map((group, gi) => (
             <div key={gi} className="flex flex-col gap-2">

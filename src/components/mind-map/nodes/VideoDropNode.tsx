@@ -211,7 +211,7 @@ export default function VideoDropNode({
   const analyzing = status === "analyzing";
 
   return (
-    <div className="group relative w-[280px]">
+    <div className="group relative w-70">
       <QuickConnectArrows id={id} selected={!!selected} />
 
       <Handle
@@ -266,7 +266,7 @@ export default function VideoDropNode({
       <div
         className={[
           "rounded-2xl p-4 bg-[#f1f4fb] shadow-sm transition-shadow",
-          selected ? "ring-2 ring-[var(--color-primary)]" : "",
+          selected ? "ring-2 ring-primary" : "",
         ].join(" ")}
       >
         <div className="flex items-center gap-1.5 mb-3 text-gray-700">
@@ -282,7 +282,7 @@ export default function VideoDropNode({
             onBlur={() => updateNodeData(id, { tiktokUrl: url.trim() })}
             disabled={analyzing}
             placeholder="Paste a TikTok share link…"
-            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 outline-none focus:border-[var(--color-primary)] disabled:opacity-60"
+            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 outline-none focus:border-primary disabled:opacity-60"
           />
 
           {/* User prompt — larger box below */}
@@ -293,14 +293,14 @@ export default function VideoDropNode({
             disabled={analyzing}
             rows={4}
             placeholder="What should we pull from this video? e.g. hook ideas, tone, shot list…"
-            className="w-full resize-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 outline-none focus:border-[var(--color-primary)] disabled:opacity-60"
+            className="w-full resize-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 outline-none focus:border-primary disabled:opacity-60"
           />
 
           <button
             type="button"
             onClick={handleAnalyze}
             disabled={analyzing}
-            className="flex items-center justify-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)] disabled:opacity-70"
+            className="flex items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-(--color-primary-hover) disabled:opacity-70"
           >
             {analyzing ? (
               <>

@@ -136,12 +136,12 @@ export default function MindMapSidePanel() {
                             if (e.key === "Escape") setAddingKey(null);
                           }}
                           placeholder="Your own topic…"
-                          className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 outline-none focus:border-[var(--color-primary)]"
+                          className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 outline-none focus:border-primary"
                         />
                         <button
                           type="button"
                           onClick={() => handleAddSubmit(sectionKey)}
-                          className="shrink-0 rounded-xl bg-[var(--color-primary)] px-3 text-xs font-semibold text-white"
+                          className="shrink-0 rounded-xl bg-primary px-3 text-xs font-semibold text-white"
                         >
                           Add
                         </button>

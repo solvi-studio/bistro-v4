@@ -76,7 +76,7 @@ export default function CreateEventModal({
               <select
                 value={scriptId}
                 onChange={(e) => setScriptId(e.target.value)}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)]"
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none focus:border-primary"
               >
                 {scripts.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -92,7 +92,7 @@ export default function CreateEventModal({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)]"
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none focus:border-primary"
               />
             </label>
 
@@ -102,7 +102,7 @@ export default function CreateEventModal({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Film stargazing sequence"
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)]"
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none focus:border-primary"
               />
             </label>
 
@@ -112,7 +112,7 @@ export default function CreateEventModal({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)]"
+                className="resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none focus:border-primary"
               />
             </label>
 
@@ -124,7 +124,7 @@ export default function CreateEventModal({
                 type="button"
                 onClick={submit}
                 disabled={!canSubmit}
-                className="ml-auto rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+                className="ml-auto rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-(--color-primary-hover) disabled:opacity-50"
               >
                 Add event
               </button>

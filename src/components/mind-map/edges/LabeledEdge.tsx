@@ -251,7 +251,7 @@ export default function LabeledEdge({
                 if (e.key === "Escape") setIsEditing(false);
                 e.stopPropagation();
               }}
-              className="text-gray-600 text-xs bg-white border border-gray-300 rounded-lg px-2 py-0.5 shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 min-w-[60px]"
+              className="text-gray-600 text-xs bg-white border border-gray-300 rounded-lg px-2 py-0.5 shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 min-w-15"
             />
           ) : label ? (
             // biome-ignore lint/a11y/noStaticElementInteractions: edge label double-click to edit

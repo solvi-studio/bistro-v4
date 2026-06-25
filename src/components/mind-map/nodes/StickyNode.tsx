@@ -99,7 +99,7 @@ export default function StickyNode({
   const fontSize = data.fontSize ?? 14;
 
   return (
-    <div className="group relative w-full h-full min-w-[60px] min-h-[60px] select-none">
+    <div className="group relative w-full h-full min-w-15 min-h-[60px] select-none">
       <NodeResizer
         isVisible={selected}
         minWidth={60}
@@ -184,7 +184,7 @@ export default function StickyNode({
           onKeyDown={isEditing ? handleKeyDown : undefined}
           style={{ fontSize }}
           className={[
-            "w-full h-full p-3 leading-snug text-gray-800 break-words whitespace-pre-wrap",
+            "w-full h-full p-3 leading-snug text-gray-800 wrap-break-word whitespace-pre-wrap",
             "focus:outline-none",
             isEditing ? "nodrag nopan cursor-text" : "cursor-default",
             !data.text && !isEditing ? "text-gray-400" : "",

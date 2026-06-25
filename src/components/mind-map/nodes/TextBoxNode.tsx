@@ -34,7 +34,7 @@ export const FONT_SIZE_MAP: Record<FontSize, number> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const HANDLE_CLS =
-  "!w-2 !h-2 !rounded-full !border !border-gray-300 !bg-white opacity-0 group-hover:opacity-60 transition-opacity duration-150";
+  "!w-2 !h-2 !rounded-full border! !border-gray-300 !bg-white opacity-0 group-hover:opacity-60 transition-opacity duration-150";
 
 export default function TextBoxNode({
   id,
@@ -111,7 +111,7 @@ export default function TextBoxNode({
   }, []);
 
   return (
-    <div className="group relative min-w-[80px]">
+    <div className="group relative min-w-20">
       <NodeToolbar
         nodeType="textbox"
         id={id}
@@ -200,7 +200,7 @@ export default function TextBoxNode({
         onKeyDown={isEditing ? handleKeyDown : undefined}
         style={{ fontSize, minHeight: `${fontSize * 1.5}px` }}
         className={[
-          "w-full px-1 leading-snug text-gray-800 break-words whitespace-pre-wrap",
+          "w-full px-1 leading-snug text-gray-800 wrap-break-word whitespace-pre-wrap",
           "focus:outline-none bg-transparent",
           isEditing ? "nodrag nopan cursor-text" : "cursor-default",
           selected && !isEditing

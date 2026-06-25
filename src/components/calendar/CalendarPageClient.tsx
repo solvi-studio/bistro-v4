@@ -146,7 +146,7 @@ export default function CalendarPageClient() {
 
   return (
     <div
-      className="flex h-full font-[var(--font-poppins)] font-medium"
+      className="flex h-full font-(--font-poppins) font-medium"
       style={{ background: "#FAFAFB" }}
     >
       {/* Sidebar */}
@@ -220,7 +220,7 @@ export default function CalendarPageClient() {
                     }}
                     className={`block w-full px-4 py-2 text-left text-sm transition-colors hover:bg-gray-50 ${
                       view === v
-                        ? "font-semibold text-[var(--color-primary)]"
+                        ? "font-semibold text-primary"
                         : "text-gray-700"
                     }`}
                   >
@@ -234,7 +234,7 @@ export default function CalendarPageClient() {
           <button
             type="button"
             onClick={() => setSelectedISO(toISO(new Date()))}
-            className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)]"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-(--color-primary-hover)"
           >
             Today
           </button>

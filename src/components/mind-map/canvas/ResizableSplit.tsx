@@ -66,7 +66,7 @@ export default function ResizableSplit({ left, right }: Props) {
 
           <PanelResizeHandle
             onDragging={handleDragging}
-            className="group relative w-1.5 bg-gray-100 transition-colors data-[resize-handle-state=drag]:bg-[var(--color-primary)] data-[resize-handle-state=hover]:bg-blue-200"
+            className="group relative w-1.5 bg-gray-100 transition-colors data-[resize-handle-state=drag]:bg-primary data-[resize-handle-state=hover]:bg-blue-200"
           >
             <span className="absolute inset-y-0 -left-1.5 -right-1.5" />
           </PanelResizeHandle>

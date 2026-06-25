@@ -327,7 +327,7 @@ function CanvasInner() {
           type="button"
           title="Finalise idea and generate summary"
           onClick={handleFinalise}
-          className="flex items-center gap-1.5 rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[var(--color-primary-hover)]"
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-(--color-primary-hover)"
         >
           <Sparkles size={14} /> Finalise
         </button>
@@ -370,11 +370,11 @@ function CanvasInner() {
           color="#e5e7eb"
         />
         <Controls
-          className="!border !border-gray-200 !shadow-sm !rounded-xl overflow-hidden"
+          className="border! border-gray-200! shadow-sm! rounded-xl! overflow-hidden"
           showInteractive={false}
         />
         <MiniMap
-          className="!border !border-gray-200 !shadow-sm !rounded-xl overflow-hidden !transition-opacity !duration-300"
+          className="border! border-gray-200! shadow-sm! rounded-xl! overflow-hidden transition-opacity! duration-300!"
           style={{
             opacity: showMinimap ? 1 : 0,
             pointerEvents: showMinimap ? "auto" : "none",

@@ -21,7 +21,7 @@ export default function EventDetailPanel({ event, onClose }: Props) {
   const date = fromISO(event.date);
 
   return (
-    <aside className="flex w-[340px] shrink-0 flex-col border-l border-gray-100 bg-white p-5 overflow-y-auto font-[var(--font-poppins)]">
+    <aside className="flex w-85 shrink-0 flex-col border-l border-gray-100 bg-white p-5 overflow-y-auto font-(--font-poppins)">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <span className="text-sm font-semibold text-gray-500">Event</span>
@@ -88,7 +88,7 @@ export default function EventDetailPanel({ event, onClose }: Props) {
 
       {/* Notes */}
       <div className="mb-5">
-        <div className="min-h-[120px] rounded-lg border border-dashed border-gray-300 p-3">
+        <div className="min-h-30 rounded-lg border border-dashed border-gray-300 p-3">
           {event.notes.length > 0 ? (
             <ul className="flex flex-col gap-1">
               {event.notes.map((n, i) => (

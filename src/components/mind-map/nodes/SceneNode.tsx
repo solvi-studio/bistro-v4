@@ -36,7 +36,7 @@ const SIDE_ID: Record<Position, string> = {
   [Position.Left]: "left",
 };
 const HANDLE_CLS =
-  "!h-2 !w-2 !border !border-white !bg-gray-500 !opacity-0 transition-opacity hover:!opacity-100";
+  "!h-2 !w-2 border! !border-white !bg-gray-500 !opacity-0 transition-opacity hover:!opacity-100";
 
 // Parse the highest "Scene N" number across all scene nodes so numbering stays
 // monotonically increasing even after deletions.
