@@ -93,7 +93,6 @@ export default function PlanBoard({ tasks, onUpdate }: Props) {
                   onDelete={deleteTask}
                   variant="card"
                   accentCls={phase.accent}
-                  showTime={phase.key === "production"}
                 />
               ))}
 
