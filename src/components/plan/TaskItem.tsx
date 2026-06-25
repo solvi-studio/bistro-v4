@@ -35,12 +35,6 @@ function formatTime(hhmm: string): string {
   return `${hour}:${mStr} ${period}`;
 }
 
-function timeLabel(task: PlanTask): string | null {
-  if (!task.scheduledStartTime) return null;
-  const start = formatTime(task.scheduledStartTime);
-  if (!task.scheduledEndTime) return start;
-  return `${start} – ${formatTime(task.scheduledEndTime)}`;
-}
 
 export default function TaskItem({
   task,
@@ -191,11 +185,7 @@ export default function TaskItem({
               {formatDate(task.scheduledDate)}
             </span>
           )}
-          {timeLabel(task) && (
-            <span className="shrink-0 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
-              {timeLabel(task)}
-            </span>
-          )}
+
           <button
             ref={calBtnRef}
             type="button"
