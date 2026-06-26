@@ -63,7 +63,7 @@ const SIDE_ID: Record<Position, string> = {
 };
 
 const HANDLE_CLS =
-  "!h-2 !w-2 border! !border-white !bg-gray-400 !opacity-0 transition-opacity hover:!opacity-100";
+  "h-2 w-2 border border-white bg-gray-400 opacity-0 transition-opacity hover:opacity-100";
 
 export default function ContentNode({
   id,
