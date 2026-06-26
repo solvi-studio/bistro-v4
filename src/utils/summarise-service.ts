@@ -8,21 +8,20 @@ export interface SummariseResult {
   shots: ShotData[];
 }
 
-// One shot row in the backend storyboard.
-interface ShotApiResponse {
+// One scene in the backend storyboard breakdown.
+interface SceneApiResponse {
+  scene: string;
   description: string;
-  shooting_style: string;
+  visual: string;
   audio: string;
-  time?: string;
   script: string;
 }
 
 // Shape returned by `POST /api/v1/summary`.
+// The endpoint returns only `scenes`; it no longer carries concept/tone/
+// audience meta. ConceptMeta is sourced elsewhere (see utils/plan.ts).
 interface SummaryApiResponse {
-  concept: string;
-  tone_of_voice: string;
-  target_audience: string;
-  storyboard: ShotApiResponse[];
+  scenes: SceneApiResponse[];
 }
 
 type SummariseStatus = "pending" | "done" | "error";
@@ -69,35 +68,35 @@ export function subscribeSummaryStatus(cb: () => void): () => void {
   return () => statusListeners.delete(cb);
 }
 
-// ── storyboard → shot rows ─────────────────────────────────────────────────
-// The endpoint now returns structured shots. Map each onto a ShotData row;
+// ── scenes → shot rows ─────────────────────────────────────────────────────
+// The endpoint returns structured scenes. Map each onto a ShotData row:
+//   visual → shootingStyle (there is no separate `time` field anymore).
 // `script` is a single string backend-side, so wrap it for the table's
 // line-per-entry rendering (split on newlines when present).
-function shotToRow(shot: ShotApiResponse, i: number): ShotData {
-  const lines = shot.script
+function sceneToRow(scene: SceneApiResponse, i: number): ShotData {
+  const lines = scene.script
     .split(/\n+/)
     .map((s) => s.trim())
     .filter(Boolean);
 
   return {
     shotNumber: i + 1,
-    time: shot.time,
-    description: shot.description,
-    shootingStyle: shot.shooting_style || "—",
-    audio: shot.audio || "—",
-    script: lines.length > 0 ? lines : [shot.script],
+    time: undefined,
+    description: scene.description,
+    shootingStyle: scene.visual || "—",
+    audio: scene.audio || "—",
+    script: lines.length > 0 ? lines : [scene.script],
   };
 }
 
+// The /summary endpoint no longer returns concept/tone/audience, so meta is
+// left blank here — the consumers that need it read from their own store.
 function mapResponse(res: SummaryApiResponse): SummariseResult {
   return {
     meta: {
-      concept: res.concept,
-      tone: res.tone_of_voice,
-      targetAudience: res.target_audience,
       projectName: "Your Idea",
     },
-    shots: (res.storyboard ?? []).map(shotToRow),
+    shots: (res.scenes ?? []).map(sceneToRow),
   };
 }
 
@@ -207,6 +206,12 @@ export function resumeSummary(): Promise<SummariseResult> | null {
   if (!graph) return null;
   pending = run(graph);
   return pending;
+}
+
+// The last completed summary result, if any. The plan stage reads this to seed
+// its planner input. Returns null until a summary has landed.
+export function getSummaryResult(): SummariseResult | null {
+  return storage.read<SummariseResult | null>(RESULT_KEY, null);
 }
 
 // Clear a finished/failed job (e.g. when the user starts a fresh idea).
