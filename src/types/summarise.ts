@@ -8,9 +8,6 @@ export interface ShotData {
 }
 
 export interface ConceptMeta {
-  concept: string;
-  tone: string;
-  targetAudience: string;
   projectName: string;
 }
 

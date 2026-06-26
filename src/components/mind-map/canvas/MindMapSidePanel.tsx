@@ -169,7 +169,9 @@ export default function MindMapSidePanel() {
 
       {/* Video Analysis — draggable card that drops a VideoDropNode onto canvas */}
       <div className="flex flex-col gap-3">
-        <h3 className="text-sm font-bold text-gray-700">Video Analysis</h3>
+        <h3 className="text-sm font-bold" style={{ color: "#0f766e" }}>
+          Video Analysis
+        </h3>
         {/* biome-ignore lint/a11y/noStaticElementInteractions: draggable card */}
         <div
           draggable
@@ -177,30 +179,21 @@ export default function MindMapSidePanel() {
             e.dataTransfer.setData(VIDEO_DND_MIME, "1");
             e.dataTransfer.effectAllowed = "copy";
           }}
-          className="flex cursor-grab flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-white px-4 py-5 text-center transition-colors hover:border-gray-400 active:cursor-grabbing"
+          className="flex cursor-grab items-center gap-3 rounded-2xl px-4 py-5 transition-all hover:brightness-95 active:cursor-grabbing"
+          style={{ backgroundColor: "#e4f2eb" }}
         >
-          <GripVertical size={13} className="shrink-0 text-gray-400" />
-          <p className="text-xs text-gray-400 leading-relaxed">
-            Drag &amp; drop your inspiration videos, your past posts or whatever
-            you want to replicate in your next idea
-          </p>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="text-gray-400"
-            aria-hidden="true"
+          <GripVertical
+            size={20}
+            className="shrink-0"
+            style={{ color: "#4caf87" }}
+          />
+          <p
+            className="text-sm leading-relaxed"
+            style={{ color: "#2e7d5a" }}
           >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="17 8 12 3 7 8" />
-            <line x1="12" y1="3" x2="12" y2="15" />
-          </svg>
+            Your inspiration videos, your past posts or whatever you want to
+            replicate in your next idea
+          </p>
         </div>
       </div>
     </div>

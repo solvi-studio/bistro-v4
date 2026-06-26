@@ -23,6 +23,8 @@ export interface CalendarEvent {
   endTime?: string;
   title: string;
   notes: string[];
+  location?: string;
+  reminders?: string[];
 }
 
 // A calendar event joined with its folder's display info (title + colour),

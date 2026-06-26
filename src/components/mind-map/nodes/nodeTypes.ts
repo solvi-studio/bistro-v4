@@ -1,4 +1,5 @@
 import type { NodeTypes } from "@xyflow/react";
+import ContentNode from "@/components/mind-map/nodes/ContentNode";
 import SceneNode from "@/components/mind-map/nodes/SceneNode";
 import ShapeNode from "@/components/mind-map/nodes/ShapeNode";
 import StickyNode from "@/components/mind-map/nodes/StickyNode";
@@ -15,4 +16,5 @@ export const nodeTypes: NodeTypes = {
   textbox: TextBoxNode,
   shape: ShapeNode,
   videoDrop: VideoDropNode,
+  content: ContentNode,
 };
