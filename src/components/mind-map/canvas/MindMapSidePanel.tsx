@@ -9,7 +9,7 @@ import {
   type MindMapGroup,
 } from "@/components/mind-map/constants/topics";
 import {
-  spawnTopicNode,
+  spawnContentNode,
   TOPIC_DND_MIME,
   type TopicDragPayload,
   VIDEO_DND_MIME,
@@ -22,13 +22,6 @@ export default function MindMapSidePanel() {
   const scriptId = params.get("script");
   const mapId = scriptId ?? "default";
 
-  // "Add Your Own" disabled for now — state kept commented for later re-enable.
-  // const [addingKey, setAddingKey] = useState<string | null>(null);
-  // const [addValue, setAddValue] = useState("");
-  // User-added topics, kept in the panel as selectable chips (per section).
-  // They only land on the mind map when their chip is pressed. Persisted per
-  // map so the shortlist survives leaving and returning to the canvas.
-  // Init empty (matches SSR), then hydrate from storage after mount.
   const [customItems, setCustomItems] = useState<Record<string, string[]>>({});
   const restored = useRef(false);
 
@@ -37,18 +30,15 @@ export default function MindMapSidePanel() {
     restored.current = true;
   }, [mapId]);
 
-  // Persist the shortlist, debounced — gated until the saved value has loaded
-  // so the initial empty state never overwrites it.
   useEffect(() => {
     if (!restored.current) return;
     const t = setTimeout(() => saveCustomItems(mapId, customItems), 300);
     return () => clearTimeout(t);
   }, [mapId, customItems]);
 
-  // Click spawns at the hub's default stagger; drag (below) lets the cursor
-  // decide placement. Both funnel through the shared spawn helper.
   function spawnTopic(group: MindMapGroup, label: string) {
-    spawnTopicNode({ addNodes }, group, label);
+    if (!group.category) return;
+    spawnContentNode({ addNodes }, group.category, label);
   }
 
   function handleDragStart(
@@ -56,23 +46,11 @@ export default function MindMapSidePanel() {
     group: MindMapGroup,
     label: string,
   ) {
-    const payload: TopicDragPayload = { hubId: group.hubId, label };
+    if (!group.category) return;
+    const payload: TopicDragPayload = { category: group.category, header: label };
     e.dataTransfer.setData(TOPIC_DND_MIME, JSON.stringify(payload));
     e.dataTransfer.effectAllowed = "copy";
   }
-
-  // Add the typed topic to the section's chip list — does NOT spawn a node.
-  // Disabled for now along with the "Add Your Own" UI; kept for later re-enable.
-  // function handleAddSubmit(sectionKey: string) {
-  //   const text = addValue.trim();
-  //   if (!text) return;
-  //   setCustomItems((prev) => ({
-  //     ...prev,
-  //     [sectionKey]: [...(prev[sectionKey] ?? []), text],
-  //   }));
-  //   setAddValue("");
-  //   setAddingKey(null);
-  // }
 
   return (
     <div className="flex flex-col gap-6">
@@ -121,45 +99,6 @@ export default function MindMapSidePanel() {
                       </button>
                     ),
                   )}
-
-                  {/* "Add Your Own" disabled for now — kept for later re-enable.
-                  {section.allowAdd &&
-                    (addingKey === sectionKey ? (
-                      <div className="flex gap-1.5">
-                        <input
-                          // biome-ignore lint/a11y/noAutofocus: input appears on user click
-                          autoFocus
-                          value={addValue}
-                          onChange={(e) => setAddValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleAddSubmit(sectionKey);
-                            if (e.key === "Escape") setAddingKey(null);
-                          }}
-                          placeholder="Your own topic…"
-                          className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 outline-none focus:border-primary"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleAddSubmit(sectionKey)}
-                          className="shrink-0 rounded-xl bg-primary px-3 text-xs font-semibold text-white"
-                        >
-                          Add
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAddingKey(sectionKey);
-                          setAddValue("");
-                        }}
-                        className="flex items-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white px-3 py-2.5 text-left text-xs font-medium text-gray-400 transition-colors hover:border-gray-400 hover:text-gray-600"
-                      >
-                        <Plus size={13} className="shrink-0" />
-                        Add Your Own
-                      </button>
-                    ))}
-                  */}
                 </div>
               );
             })}
@@ -167,7 +106,7 @@ export default function MindMapSidePanel() {
         );
       })}
 
-      {/* Video Analysis — draggable card that drops a VideoDropNode onto canvas */}
+      {/* Video Analysis — draggable card that drops a VideoNode onto canvas */}
       <div className="flex flex-col gap-3">
         <h3 className="text-sm font-bold" style={{ color: "#0f766e" }}>
           Video Analysis

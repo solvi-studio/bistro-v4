@@ -3,6 +3,19 @@ import type { CSSProperties } from "react";
 export const IDEA_ID = "idea";
 export const IDEA_POS = { x: 430, y: 320 };
 
+// ── Content category type (shared by ContentNode, SceneNode, sidebar) ─────────
+
+export type ContentCategory = "visual" | "audio" | "script";
+
+export const CATEGORY_THEME: Record<
+  ContentCategory,
+  { headerBg: string; headerText: string; bodyText: string }
+> = {
+  visual: { headerBg: "#fbe0e1", headerText: "#d6494e", bodyText: "#6b2b2e" },
+  audio:  { headerBg: "#e3ecfb", headerText: "#3b6fd4", bodyText: "#2a3f6b" },
+  script: { headerBg: "#fbeec6", headerText: "#b08400", bodyText: "#6b5410" },
+};
+
 export interface TopicSection {
   /** Optional sub-heading shown above the items (e.g. "Format"). */
   label?: string;
@@ -20,15 +33,16 @@ export interface MindMapGroup {
   leafDir: -1 | 1;
   leafBg: string;
   leafText: string;
+  /** body text colour for content nodes spawned from this group */
+  bodyText: string;
+  /** Maps to a ContentCategory for non-script groups (undefined for fromScript). */
+  category?: ContentCategory;
   /** When true, sections are derived at runtime from the active script. */
   fromScript?: boolean;
   sections: TopicSection[];
 }
 
-// The 4 hub nodes that ring the central idea node. Every panel-spawned topic
-// node attaches to one of these hubs. Big Picture is script-derived (rendered as
-// the read-only platform/goal box above the shortlist); Visual / Audio / Script
-// carry the draggable shortlist chips.
+// The 4 hub nodes that ring the central idea node.
 export const MIND_MAP_GROUPS: MindMapGroup[] = [
   {
     hubId: "hub-bigpicture",
@@ -38,6 +52,7 @@ export const MIND_MAP_GROUPS: MindMapGroup[] = [
     leafDir: 1,
     leafBg: "#fbe0e1",
     leafText: "#d6494e",
+    bodyText: "#6b2b2e",
     fromScript: true,
     sections: [],
   },
@@ -49,6 +64,8 @@ export const MIND_MAP_GROUPS: MindMapGroup[] = [
     leafDir: -1,
     leafBg: "#fbe0e1",
     leafText: "#d6494e",
+    bodyText: "#6b2b2e",
+    category: "visual",
     sections: [
       {
         items: ["Scene Description", "Shooting Style"],
@@ -64,6 +81,8 @@ export const MIND_MAP_GROUPS: MindMapGroup[] = [
     leafDir: -1,
     leafBg: "#e3ecfb",
     leafText: "#3b6fd4",
+    bodyText: "#2a3f6b",
+    category: "audio",
     sections: [
       {
         items: ["Voiceover", "Trending Music", "Sound Effect"],
@@ -79,6 +98,8 @@ export const MIND_MAP_GROUPS: MindMapGroup[] = [
     leafDir: -1,
     leafBg: "#fbeec6",
     leafText: "#b08400",
+    bodyText: "#6b5410",
+    category: "script",
     sections: [
       {
         items: ["Concept Writing", "Timing"],
@@ -88,9 +109,14 @@ export const MIND_MAP_GROUPS: MindMapGroup[] = [
   },
 ];
 
+/** Returns the option items for a given content category (from the matching hub). */
+export function categoryOptions(category: ContentCategory): string[] {
+  const group = MIND_MAP_GROUPS.find((g) => g.category === category);
+  return group?.sections.flatMap((s) => s.items) ?? [];
+}
+
 // ── Anchor (locked) nodes ───────────────────────────────────────────────────
 // Only the central idea (Scene 1) is locked — it can't be deleted or erased.
-// The hub nodes are now freely editable and deletable like any other node.
 export const ANCHOR_NODE_IDS: ReadonlySet<string> = new Set([IDEA_ID]);
 
 export interface NodePalette {

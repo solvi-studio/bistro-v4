@@ -9,9 +9,11 @@ import {
   getSmoothStepPath,
   getStraightPath,
   MarkerType,
-  type Position,
+  Position,
+  useInternalNode,
   useReactFlow,
 } from "@xyflow/react";
+import { pickHandles, type HandleSide } from "@/utils/mind-map-handles";
 import { ArrowLeft, ArrowRight, Trash2, Type } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
@@ -35,6 +37,22 @@ export const EDGE_MARKER = {
   height: 16,
   color: "#9ca3af",
 };
+
+// ─── Dynamic handle coords ───────────────────────────────────────────────────
+
+function sideToCoords(
+  absPos: { x: number; y: number },
+  w: number,
+  h: number,
+  side: HandleSide,
+): { x: number; y: number; position: Position } {
+  switch (side) {
+    case "top":    return { x: absPos.x + w / 2, y: absPos.y,         position: Position.Top };
+    case "bottom": return { x: absPos.x + w / 2, y: absPos.y + h,     position: Position.Bottom };
+    case "left":   return { x: absPos.x,          y: absPos.y + h / 2, position: Position.Left };
+    case "right":  return { x: absPos.x + w,      y: absPos.y + h / 2, position: Position.Right };
+  }
+}
 
 // ─── Path helper ──────────────────────────────────────────────────────────────
 
@@ -64,6 +82,8 @@ const EDGE_STYLE_LABELS: Record<EdgeStyleType, string> = {
 
 export default function LabeledEdge({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   sourcePosition,
@@ -84,15 +104,40 @@ export default function LabeledEdge({
   const arrowStart = data?.arrowStart ?? false;
   const arrowEnd = data?.arrowEnd ?? true;
 
-  // Coordinates come from the connected handles (chosen once at creation via
-  // pickHandles) — ReactFlow feeds sourceX/Y/Position + targetX/Y/Position.
+  // Re-pick handles dynamically from current node positions so the edge always
+  // exits/enters the closest side regardless of which handle was stored at creation.
+  const srcNode = useInternalNode(source);
+  const tgtNode = useInternalNode(target);
+
+  let sX = sourceX, sY = sourceY, sPos = sourcePosition;
+  let tX = targetX, tY = targetY, tPos = targetPosition;
+
+  if (srcNode && tgtNode) {
+    const srcAbs = srcNode.internals.positionAbsolute;
+    const tgtAbs = tgtNode.internals.positionAbsolute;
+    const srcW = srcNode.measured?.width ?? 150;
+    const srcH = srcNode.measured?.height ?? 50;
+    const tgtW = tgtNode.measured?.width ?? 150;
+    const tgtH = tgtNode.measured?.height ?? 50;
+
+    const { sourceHandle, targetHandle } = pickHandles(
+      { position: srcAbs, measured: { width: srcW, height: srcH } },
+      { position: tgtAbs, measured: { width: tgtW, height: tgtH } },
+    );
+
+    const s = sideToCoords(srcAbs, srcW, srcH, sourceHandle);
+    const t = sideToCoords(tgtAbs, tgtW, tgtH, targetHandle);
+    sX = s.x; sY = s.y; sPos = s.position;
+    tX = t.x; tY = t.y; tPos = t.position;
+  }
+
   const [edgePath, labelX, labelY] = getEdgePath(edgeType, {
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
+    sourceX: sX,
+    sourceY: sY,
+    sourcePosition: sPos,
+    targetX: tX,
+    targetY: tY,
+    targetPosition: tPos,
   });
 
   const toggleArrow = useCallback(

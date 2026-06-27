@@ -1,49 +1,42 @@
 import type { Node } from "@xyflow/react";
-import {
-  leafNodeStyle,
-  MIND_MAP_GROUPS,
-  type MindMapGroup,
-} from "@/components/mind-map/constants/topics";
+import type { ContentCategory } from "@/components/mind-map/constants/topics";
+import type { ContentNodeData } from "@/components/mind-map/nodes/ContentNode";
 
 export const TOPIC_DND_MIME = "application/x-mindmap-topic";
 export const VIDEO_DND_MIME = "application/x-mindmap-video";
 
 export interface TopicDragPayload {
-  hubId: string;
-  label: string;
-}
-
-function truncate(text: string, max = 48): string {
-  const t = text.trim();
-  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
+  category: ContentCategory;
+  header: string;
 }
 
 interface FlowOps {
   addNodes: (nodes: Node | Node[]) => void;
 }
 
-export function findGroup(hubId: string): MindMapGroup | undefined {
-  return MIND_MAP_GROUPS.find((g) => g.hubId === hubId);
-}
-
-// Drop a shortlist chip onto the canvas as a plain colored leaf node.
-// No hub lookup, no edge — the user wires things manually.
-export function spawnTopicNode(
+// Drop a sidebar chip or click onto the canvas as a themed content node.
+export function spawnContentNode(
   rf: FlowOps,
-  group: MindMapGroup,
-  label: string,
+  category: ContentCategory,
+  header: string,
   position?: { x: number; y: number },
 ): void {
-  const text = label.trim();
-  if (!text) return;
+  const trimmed = header.trim();
+  if (!trimmed) return;
 
   const pos = position ?? { x: 400, y: 300 };
 
+  const data: ContentNodeData = {
+    category,
+    header: trimmed,
+    body: "",
+    fontSize: 14,
+  };
+
   rf.addNodes({
-    id: `topic-${group.hubId}-${Date.now()}`,
-    type: "default",
+    id: `content-${category}-${Date.now()}`,
+    type: "content",
     position: pos,
-    data: { label: truncate(text) },
-    style: leafNodeStyle(group.leafBg, group.leafText),
+    data,
   });
 }

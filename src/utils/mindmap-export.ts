@@ -1,7 +1,5 @@
 import type { Edge, Node, Viewport } from "@xyflow/react";
-import type { ShapeData } from "@/components/mind-map/nodes/ShapeNode";
-import type { StickyData } from "@/components/mind-map/nodes/StickyNode";
-import type { TextBoxData } from "@/components/mind-map/nodes/TextBoxNode";
+import type { ContentNodeData } from "@/components/mind-map/nodes/ContentNode";
 import { getScripts } from "@/utils/creative";
 
 function downloadJSON(filename: string, data: unknown) {
@@ -19,16 +17,12 @@ function downloadJSON(filename: string, data: unknown) {
 }
 
 function nodeContent(node: Node): string {
-  switch (node.type) {
-    case "sticky":
-      return (node.data as StickyData).text;
-    case "textbox":
-      return (node.data as TextBoxData).html.replace(/<[^>]+>/g, "");
-    case "shape":
-      return (node.data as ShapeData).text;
-    default:
-      return (node.data as { label?: string }).label ?? "";
+  if (node.type === "content") {
+    const d = node.data as ContentNodeData;
+    // header + body so AI gets full context
+    return [d.header, d.body].filter(Boolean).join(": ");
   }
+  return (node.data as { label?: string }).label ?? "";
 }
 
 // ── Export 1: Standard (reimportable) ──────────────────────────────────────
@@ -63,7 +57,7 @@ export interface SceneExport {
   id: string;
   label: string;
   order: number;
-  /** Topic hubs directly connected to this scene (e.g. Scene Description). */
+  /** Content nodes directly connected to this scene. */
   topics: SceneTopic[];
   /** Video analysis nodes connected to this scene, with their insight leaves. */
   videoInspirations: VideoInspiration[];
@@ -89,7 +83,6 @@ function buildMindMapGraph(
   edges: Edge[],
   scriptId?: string,
 ): MindMapGraph {
-  // Project info from the active script (if any).
   const script = scriptId ? getScripts().find((s) => s.id === scriptId) : null;
   const project = {
     name: script?.title ?? "Untitled",
@@ -103,7 +96,6 @@ function buildMindMapGraph(
     return n ? nodeContent(n) : "";
   };
 
-  // Build outgoing and incoming edge maps; track sceneEdge targets.
   const outEdges = new Map<string, string[]>();
   const inEdges = new Map<string, string[]>();
   const sceneEdgeTargets = new Set<string>();
@@ -120,7 +112,6 @@ function buildMindMapGraph(
     if (edge.type === "sceneEdge") sceneEdgeTargets.add(edge.target);
   }
 
-  // Collect all scene nodes and build the sceneEdge forward-walk map.
   const sceneIds = nodes.filter((n) => n.type === "scene").map((n) => n.id);
   const sceneSet = new Set(sceneIds);
 
@@ -135,7 +126,6 @@ function buildMindMapGraph(
     }
   }
 
-  // Walk chains from roots (scenes not targeted by any sceneEdge).
   const orderedSceneIds: string[] = [];
   const visited = new Set<string>();
 
@@ -150,14 +140,10 @@ function buildMindMapGraph(
     }
   }
 
-  // Append any disconnected scene nodes not reached by any chain.
   for (const id of sceneIds) {
     if (!visited.has(id)) orderedSceneIds.push(id);
   }
 
-  // Build each scene's content by traversing both outgoing and incoming edges.
-  // Incoming edges cover "node → scene" connections the user drew manually.
-  // A node shared across multiple scenes appears under each of them.
   const claimedIds = new Set<string>(sceneSet);
 
   const scenes: SceneExport[] = orderedSceneIds.map((sceneId, idx) => {
@@ -165,14 +151,13 @@ function buildMindMapGraph(
     const videoInspirations: VideoInspiration[] = [];
     const notes: string[] = [];
 
-    // Merge outgoing targets + incoming sources, deduplicated.
     const neighborIds = new Set([
       ...(outEdges.get(sceneId) ?? []),
       ...(inEdges.get(sceneId) ?? []),
     ]);
 
     for (const targetId of neighborIds) {
-      if (sceneSet.has(targetId)) continue; // skip scene-to-scene links
+      if (sceneSet.has(targetId)) continue;
       const target = nodeById.get(targetId);
       if (!target) continue;
       claimedIds.add(targetId);
@@ -188,8 +173,16 @@ function buildMindMapGraph(
         if (insights.length > 0) {
           videoInspirations.push({ videoId: targetId, insights });
         }
+      } else if (target.type === "content") {
+        // Content nodes group by their header as the hub label
+        const d = target.data as ContentNodeData;
+        const body = d.body?.trim();
+        if (body) {
+          topics.push({ hubLabel: d.header, items: [body] });
+        } else {
+          notes.push(d.header);
+        }
       } else {
-        // Nodes with outgoing edges = topic hub (e.g. Scene Description).
         const leafIds = (outEdges.get(targetId) ?? []).filter(
           (id) => !sceneSet.has(id),
         );
@@ -217,7 +210,6 @@ function buildMindMapGraph(
     };
   });
 
-  // Anything not reachable from a scene.
   const globalNotes = nodes
     .filter((n) => !claimedIds.has(n.id) && n.type !== "videoDrop")
     .map((n) => nodeContent(n))

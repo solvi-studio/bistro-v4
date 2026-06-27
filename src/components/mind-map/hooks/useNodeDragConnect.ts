@@ -26,7 +26,20 @@ function setNodeHighlight(nodeId: string | null) {
   }
 }
 
-// Returns sceneEdge when both nodes are scenes, labeled edge otherwise.
+// ── Connection direction normalisation ────────────────────────────────────────
+// Rule: scene is always the source when exactly one side is a scene.
+// Scene→scene is always sceneEdge; non-scene→non-scene uses labeled edge.
+
+function normalizeSceneEdge(
+  a: Node,
+  b: Node,
+): { source: Node; target: Node } {
+  if (a.type === "scene" && b.type !== "scene") return { source: a, target: b };
+  if (b.type === "scene" && a.type !== "scene") return { source: b, target: a };
+  // scene↔scene or content↔content — keep original order
+  return { source: a, target: b };
+}
+
 function buildConnectedEdge(
   source: Node,
   target: Node,
@@ -35,7 +48,14 @@ function buildConnectedEdge(
 ): Edge {
   const id = `e-${source.id}-${target.id}`;
   if (source.type === "scene" && target.type === "scene") {
-    return { id, source: source.id, target: target.id, sourceHandle, targetHandle, type: "sceneEdge" as const };
+    return {
+      id,
+      source: source.id,
+      target: target.id,
+      sourceHandle,
+      targetHandle,
+      type: "sceneEdge" as const,
+    };
   }
   return {
     id,
@@ -47,6 +67,23 @@ function buildConnectedEdge(
     data: { arrowEnd: true },
     markerEnd: EDGE_MARKER,
   };
+}
+
+/** Check that adding this scene→scene edge keeps the chain linear. */
+function wouldBreakChain(
+  sourceId: string,
+  targetId: string,
+  edges: Edge[],
+): boolean {
+  // Source already has an outgoing sceneEdge
+  const sourceHasSuccessor = edges.some(
+    (e) => e.type === "sceneEdge" && e.source === sourceId,
+  );
+  // Target already has an incoming sceneEdge
+  const targetHasPredecessor = edges.some(
+    (e) => e.type === "sceneEdge" && e.target === targetId,
+  );
+  return sourceHasSuccessor || targetHasPredecessor;
 }
 
 export function useNodeDragConnect({
@@ -85,19 +122,34 @@ export function useNodeDragConnect({
       setNodeHighlight(null);
       if (!targetId) return;
 
-      const target = getNodes().find((n) => n.id === targetId);
-      if (!target) return;
+      const rawTarget = getNodes().find((n) => n.id === targetId);
+      if (!rawTarget) return;
+
+      // Normalise direction: scene is always source
+      const { source, target } = normalizeSceneEdge(rawTarget, node);
+
+      // Reject scene→scene if it would branch the chain
+      if (
+        source.type === "scene" &&
+        target.type === "scene" &&
+        wouldBreakChain(source.id, target.id, getEdges())
+      ) {
+        return;
+      }
 
       const alreadyLinked = getEdges().some(
         (e) =>
-          (e.source === target.id && e.target === node.id) ||
-          (e.source === node.id && e.target === target.id),
+          (e.source === source.id && e.target === target.id) ||
+          (e.source === target.id && e.target === source.id),
       );
       if (alreadyLinked) return;
 
-      const { sourceHandle, targetHandle } = pickHandles(target, node);
+      const { sourceHandle, targetHandle } = pickHandles(source, target);
       setEdges((eds) =>
-        addEdge(buildConnectedEdge(target, node, sourceHandle, targetHandle), eds),
+        addEdge(
+          buildConnectedEdge(source, target, sourceHandle, targetHandle),
+          eds,
+        ),
       );
     },
     [getNodes, getEdges, setEdges],
