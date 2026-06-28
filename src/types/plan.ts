@@ -1,4 +1,3 @@
-// Production phase a task belongs to — drives which board column it shows in.
 export type PlanPhase = "pre" | "production" | "post";
 
 export interface PlanTask {
@@ -10,16 +9,17 @@ export interface PlanTask {
   completed: boolean;
   colorTag: "pink" | "blue" | "yellow" | "default";
   phase: PlanPhase;
+  notes?: string[];
+  location?: string;
+  reminders?: string[];
 }
 
+// Kept until Phase 5 swaps the calendar to tasks — all callers replaced then.
 export interface CalendarEvent {
   id: string;
-  /** Folder (creative script/idea) this event belongs to. */
   scriptId: string;
   date: string;
-  /** Optional start time "HH:MM". */
   time?: string;
-  /** Optional end time "HH:MM". */
   endTime?: string;
   title: string;
   notes: string[];
@@ -27,14 +27,13 @@ export interface CalendarEvent {
   reminders?: string[];
 }
 
-// A calendar event joined with its folder's display info (title + colour),
-// produced by the cross-folder aggregation for the calendar page.
+// A calendar entry joined with its folder's display info (title + colour).
+// Phase 5 will redefine this as a scheduled PlanTask + folder info once
+// CalendarEvent is retired.
 export interface EnrichedCalendarEvent extends CalendarEvent {
   scriptTitle: string;
   colorTag: "blue" | "yellow" | "pink";
-  /** Set when this entry is derived from a scheduled plan task (read-only). */
   taskId?: string;
-  /** Production phase — drives filter + colour on the calendar page. */
   phase?: PlanPhase;
 }
 
