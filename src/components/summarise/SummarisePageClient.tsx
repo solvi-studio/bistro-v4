@@ -3,8 +3,8 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { SummariseLoadState } from "@/types/summarise";
-import { resumeSummary, type SummariseResult } from "@/utils/summarise-service";
+import type { SummariseLoadState, SummariseResult } from "@/types/summarise";
+import { resumeSummary } from "@/utils/summarise-service";
 import ShotTable from "./ShotTable";
 import SummariseSkeleton from "./SummariseSkeleton";
 
@@ -21,20 +21,15 @@ export default function SummarisePageClient() {
 
   useEffect(() => {
     let cancelled = false;
-    // Resumes across reloads: returns the in-flight request, the stored result,
-    // or a fresh re-fetch from the saved graph snapshot.
-    const pending = resumeSummary();
+    const clientId = script ?? "default";
 
-    // Never submitted (e.g. direct visit) — nothing to show, bounce back.
-    if (!pending) {
-      router.replace(`/mind-map${scriptQuery}`);
-      return;
-    }
-
-    // Wait for the real backend result; skeleton animates until it lands.
-    pending
+    resumeSummary(clientId)
       .then((result) => {
         if (cancelled) return;
+        if (result === null) {
+          router.replace(`/mind-map${scriptQuery}`);
+          return;
+        }
         setData(result);
         setLoadState("ready");
       })
@@ -43,10 +38,11 @@ export default function SummarisePageClient() {
         setErrorMsg(err instanceof Error ? err.message : "Request failed");
         setLoadState("error");
       });
+
     return () => {
       cancelled = true;
     };
-  }, [router, scriptQuery]);
+  }, [router, scriptQuery, script]);
 
   return (
     <div

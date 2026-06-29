@@ -12,3 +12,8 @@ export interface ConceptMeta {
 }
 
 export type SummariseLoadState = "loading" | "ready" | "error";
+
+export interface SummariseResult {
+  meta: ConceptMeta;
+  shots: ShotData[];
+}

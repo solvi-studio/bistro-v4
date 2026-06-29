@@ -1,12 +1,14 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  getPlanTasks as dbGetPlanTasks,
+  savePlanTasks as dbSavePlanTasks,
+} from "@/lib/db/actions/plan";
 import type { CalendarEvent, PlanTask } from "@/types/plan";
 import { loadEvents } from "@/utils/calendar";
 import { subscribeDataChange } from "@/utils/dataSync";
-import { getPlanTasks, savePlanTasks } from "@/utils/plan";
 import {
   buildPlanSummary,
   buildScheduleText,
@@ -19,8 +21,6 @@ import PlanBoard from "./PlanBoard";
 
 export default function PlanPageClient() {
   const params = useSearchParams();
-  // The plan page is scoped to one folder (idea). Its calendar reads that
-  // script's events from the shared per-script store (also feeds /calendar).
   const scriptId = params.get("script") ?? "default";
 
   const [tasks, setTasks] = useState<PlanTask[]>([]);
@@ -32,53 +32,64 @@ export default function PlanPageClient() {
   const [genError, setGenError] = useState<string | null>(null);
 
   useEffect(() => {
-    setTasks(getPlanTasks(scriptId));
-    setEvents(loadEvents(scriptId));
-    setProjectName(getSummaryResult()?.meta.projectName ?? "Your Idea");
-    setMounted(true);
+    let cancelled = false;
+    const currentEvents = loadEvents(scriptId);
+    setEvents(currentEvents);
 
-    // Re-read when another view (the global calendar, etc.) writes events/tasks.
+    dbGetPlanTasks(scriptId)
+      .then(async (loaded) => {
+        if (cancelled) return;
+        setTasks(loaded);
+        setMounted(true);
+
+        // Auto-generate plan when board is empty and a summary exists.
+        if (loaded.length === 0) {
+          const summary = await getSummaryResult(scriptId);
+          if (cancelled || !summary) return;
+
+          setIsGenerating(true);
+          try {
+            const generated = await generatePlanTasks({
+              summary: buildPlanSummary(summary),
+              schedule: buildScheduleText(currentEvents),
+            });
+            if (cancelled) return;
+            setTasks(generated);
+            dbSavePlanTasks(scriptId, generated).catch(console.error);
+          } catch (err) {
+            if (!cancelled) {
+              setGenError(
+                err instanceof Error
+                  ? err.message
+                  : "Failed to generate the plan.",
+              );
+            }
+          } finally {
+            if (!cancelled) setIsGenerating(false);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load plan tasks:", err);
+        if (!cancelled) setMounted(true);
+      });
+
+    getSummaryResult(scriptId)
+      .then((r) => setProjectName(r?.meta.projectName ?? "Your Idea"))
+      .catch(console.error);
+
     const unsubscribe = subscribeDataChange(() => {
-      setTasks(getPlanTasks(scriptId));
       setEvents(loadEvents(scriptId));
     });
-    return unsubscribe;
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [scriptId]);
 
   function handleTasksUpdate(updated: PlanTask[]) {
     setTasks(updated);
-    savePlanTasks(scriptId, updated);
-  }
-
-  // Project button → generate the task plan from the completed summary via the
-  // backend. Only while the board is empty so repeated clicks don't clobber
-  // edited tasks; the existing folder events are passed so the planner schedules
-  // around real commitments. Generated tasks persist through the per-script
-  // store (handleTasksUpdate → savePlanTasks), the single source of truth.
-  async function generatePlan() {
-    if (tasks.length > 0 || isGenerating) return;
-
-    const summary = getSummaryResult();
-    if (!summary) {
-      setGenError("Summarise your idea first, then generate a plan.");
-      return;
-    }
-
-    setIsGenerating(true);
-    setGenError(null);
-    try {
-      const generated = await generatePlanTasks({
-        summary: buildPlanSummary(summary),
-        schedule: buildScheduleText(events),
-      });
-      handleTasksUpdate(generated);
-    } catch (err) {
-      setGenError(
-        err instanceof Error ? err.message : "Failed to generate the plan.",
-      );
-    } finally {
-      setIsGenerating(false);
-    }
+    dbSavePlanTasks(scriptId, updated).catch(console.error);
   }
 
   function handleDateSelect(date: string) {
@@ -89,13 +100,10 @@ export default function PlanPageClient() {
     ? (events.find((e) => e.date === selectedDate) ?? null)
     : null;
 
-  // Tasks scheduled on the selected day — surfaced in the detail card so the
-  // dot on the calendar actually shows what's due.
   const selectedTasks = selectedDate
     ? tasks.filter((t) => t.scheduledDate === selectedDate)
     : [];
 
-  // Derive calendar markers from both stored events and task scheduled dates
   const markedDates = [
     ...events.map((e) => e.date),
     ...tasks.flatMap((t) => (t.scheduledDate ? [t.scheduledDate] : [])),
@@ -122,37 +130,25 @@ export default function PlanPageClient() {
           <h1 className="text-2xl font-(--font-display) text-gray-800">
             Plan your idea
           </h1>
-
           <h2 className="mt-3 text-sm text-gray-500">
-            Here&rsquo;s the list of what you need to prepare
+            {isGenerating
+              ? "Generating your plan…"
+              : projectName !== "Your Idea"
+                ? projectName
+                : "Here’s the list of what you need to prepare"}
           </h2>
         </div>
-
-        <button
-          type="button"
-          onClick={generatePlan}
-          disabled={tasks.length > 0 || isGenerating}
-          title={
-            tasks.length > 0
-              ? "Plan already generated"
-              : "Generate the task plan from your summary"
-          }
-          className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-(--color-primary-hover) disabled:cursor-default disabled:opacity-60 disabled:hover:bg-primary"
-        >
-          <Sparkles
-            size={14}
-            className={isGenerating ? "animate-spin" : undefined}
-          />
-          {isGenerating ? "Generating…" : projectName}
-        </button>
-
         {genError && <p className="mt-2 text-xs text-red-500">{genError}</p>}
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col gap-4 px-8 pb-8 overflow-hidden">
-        {/* Phase board: Pre / Production / Post columns */}
+        {/* Phase board */}
         <div className="flex-1 min-h-0">
-          <PlanBoard tasks={tasks} onUpdate={handleTasksUpdate} />
+          <PlanBoard
+            tasks={tasks}
+            onUpdate={handleTasksUpdate}
+            isLoading={isGenerating}
+          />
         </div>
 
         {/* Calendar card */}

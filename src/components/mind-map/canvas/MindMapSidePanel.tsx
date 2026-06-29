@@ -2,8 +2,6 @@
 
 import { useReactFlow } from "@xyflow/react";
 import { GripVertical } from "lucide-react";
-import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
 import {
   MIND_MAP_GROUPS,
   type MindMapGroup,
@@ -14,27 +12,9 @@ import {
   type TopicDragPayload,
   VIDEO_DND_MIME,
 } from "@/components/mind-map/utils/spawnTopic";
-import { loadCustomItems, saveCustomItems } from "@/utils/mind-map-store";
 
 export default function MindMapSidePanel() {
   const { addNodes } = useReactFlow();
-  const params = useSearchParams();
-  const scriptId = params.get("script");
-  const mapId = scriptId ?? "default";
-
-  const [customItems, setCustomItems] = useState<Record<string, string[]>>({});
-  const restored = useRef(false);
-
-  useEffect(() => {
-    setCustomItems(loadCustomItems(mapId));
-    restored.current = true;
-  }, [mapId]);
-
-  useEffect(() => {
-    if (!restored.current) return;
-    const t = setTimeout(() => saveCustomItems(mapId, customItems), 300);
-    return () => clearTimeout(t);
-  }, [mapId, customItems]);
 
   function spawnTopic(group: MindMapGroup, label: string) {
     if (!group.category) return;
@@ -47,7 +27,10 @@ export default function MindMapSidePanel() {
     label: string,
   ) {
     if (!group.category) return;
-    const payload: TopicDragPayload = { category: group.category, header: label };
+    const payload: TopicDragPayload = {
+      category: group.category,
+      header: label,
+    };
     e.dataTransfer.setData(TOPIC_DND_MIME, JSON.stringify(payload));
     e.dataTransfer.effectAllowed = "copy";
   }
@@ -76,29 +59,24 @@ export default function MindMapSidePanel() {
                     </p>
                   )}
 
-                  {[...section.items, ...(customItems[sectionKey] ?? [])].map(
-                    (item) => (
-                      <button
-                        key={`${sectionKey}-${item}`}
-                        type="button"
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, group, item)}
-                        onClick={() => spawnTopic(group, item)}
-                        title="Click to add, or drag onto the canvas"
-                        className="flex cursor-grab items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-transform hover:-translate-y-0.5 active:cursor-grabbing"
-                        style={{
-                          backgroundColor: group.leafBg,
-                          color: group.leafText,
-                        }}
-                      >
-                        <GripVertical
-                          size={13}
-                          className="shrink-0 opacity-50"
-                        />
-                        <span className="line-clamp-2">{item}</span>
-                      </button>
-                    ),
-                  )}
+                  {section.items.map((item) => (
+                    <button
+                      key={`${sectionKey}-${item}`}
+                      type="button"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, group, item)}
+                      onClick={() => spawnTopic(group, item)}
+                      title="Click to add, or drag onto the canvas"
+                      className="flex cursor-grab items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-transform hover:-translate-y-0.5 active:cursor-grabbing"
+                      style={{
+                        backgroundColor: group.leafBg,
+                        color: group.leafText,
+                      }}
+                    >
+                      <GripVertical size={13} className="shrink-0 opacity-50" />
+                      <span className="line-clamp-2">{item}</span>
+                    </button>
+                  ))}
                 </div>
               );
             })}
@@ -126,10 +104,7 @@ export default function MindMapSidePanel() {
             className="shrink-0"
             style={{ color: "#4caf87" }}
           />
-          <p
-            className="text-sm leading-relaxed"
-            style={{ color: "#2e7d5a" }}
-          >
+          <p className="text-sm leading-relaxed" style={{ color: "#2e7d5a" }}>
             Your inspiration videos, your past posts or whatever you want to
             replicate in your next idea
           </p>

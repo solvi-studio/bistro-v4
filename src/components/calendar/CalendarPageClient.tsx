@@ -2,29 +2,30 @@
 
 import { ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getCalendarTaskEvents } from "@/lib/db/actions/calendar";
+import { listIdeas } from "@/lib/db/actions/ideas";
 import type { CreativeScript } from "@/types/creative";
 import type {
+  CalendarEvent,
   CalendarPageView,
   EnrichedCalendarEvent,
   PlanPhase,
 } from "@/types/plan";
-import { addEvent, deleteEvent, getAllEvents, updateEvent } from "@/utils/calendar";
-import type { CalendarEvent } from "@/types/plan";
-import { getScripts } from "@/utils/creative";
+import { addEvent, loadEvents, updateEvent } from "@/utils/calendar";
 import { subscribeDataChange } from "@/utils/dataSync";
 import CalendarSidebar from "./CalendarSidebar";
 import CreateEventModal from "./CreateEventModal";
-import EventDetailPanel from "./EventDetailPanel";
-import MonthGrid from "./MonthGrid";
-import TimeGrid from "./TimeGrid";
 import {
-  MONTHS,
   addDays,
   fromISO,
+  MONTHS,
   nDays,
   startOfWeek,
   toISO,
 } from "./dateUtils";
+import EventDetailPanel from "./EventDetailPanel";
+import MonthGrid from "./MonthGrid";
+import TimeGrid from "./TimeGrid";
 
 const VIEW_LABELS: Record<CalendarPageView, string> = {
   day: "Day",
@@ -35,9 +36,24 @@ const VIEW_LABELS: Record<CalendarPageView, string> = {
 
 const VIEWS: CalendarPageView[] = ["day", "3day", "week", "month"];
 
+async function loadAllEvents(
+  scriptList: CreativeScript[],
+): Promise<EnrichedCalendarEvent[]> {
+  const taskEvents = await getCalendarTaskEvents();
+  const manualEvents = scriptList.flatMap((s) =>
+    loadEvents(s.id).map((e) => ({
+      ...e,
+      scriptTitle: s.title,
+      colorTag: (s.colorTag ?? "blue") as "blue" | "yellow" | "pink",
+    })),
+  );
+  return [...taskEvents, ...manualEvents];
+}
+
 export default function CalendarPageClient() {
   const [scripts, setScripts] = useState<CreativeScript[]>([]);
   const [events, setEvents] = useState<EnrichedCalendarEvent[]>([]);
+  const scriptsRef = useRef<CreativeScript[]>([]);
   const [activePhases, setActivePhases] = useState<Set<PlanPhase>>(
     new Set<PlanPhase>(["pre", "production", "post"]),
   );
@@ -52,22 +68,39 @@ export default function CalendarPageClient() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const s = getScripts();
-    setScripts(s);
-    setEvents(getAllEvents());
-    setMounted(true);
+    let cancelled = false;
+
+    listIdeas()
+      .then(async (ideas) => {
+        if (cancelled) return;
+        setScripts(ideas);
+        scriptsRef.current = ideas;
+        const allEvents = await loadAllEvents(ideas);
+        if (cancelled) return;
+        setEvents(allEvents);
+        setMounted(true);
+      })
+      .catch((err) => {
+        console.error("Failed to load calendar:", err);
+        if (!cancelled) setMounted(true);
+      });
 
     const unsub = subscribeDataChange(() => {
-      setScripts(getScripts());
-      setEvents(getAllEvents());
+      loadAllEvents(scriptsRef.current).then(setEvents).catch(console.error);
     });
-    return unsub;
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setViewDropdownOpen(false);
       }
     }
@@ -76,7 +109,7 @@ export default function CalendarPageClient() {
   }, []);
 
   function refresh() {
-    setEvents(getAllEvents());
+    loadAllEvents(scriptsRef.current).then(setEvents).catch(console.error);
   }
 
   function togglePhase(p: PlanPhase) {

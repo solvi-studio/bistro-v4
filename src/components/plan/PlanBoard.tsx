@@ -7,6 +7,7 @@ import TaskItem from "./TaskItem";
 interface Props {
   tasks: PlanTask[];
   onUpdate: (tasks: PlanTask[]) => void;
+  isLoading?: boolean;
 }
 
 interface PhaseConfig {
@@ -49,7 +50,20 @@ const PHASES: PhaseConfig[] = [
   },
 ];
 
-export default function PlanBoard({ tasks, onUpdate }: Props) {
+function SkeletonCard() {
+  return (
+    <div className="animate-pulse rounded-xl bg-white/60 px-3 py-2.5">
+      <div className="mb-1.5 h-3 w-3/4 rounded bg-gray-200" />
+      <div className="h-3 w-1/2 rounded bg-gray-100" />
+    </div>
+  );
+}
+
+export default function PlanBoard({
+  tasks,
+  onUpdate,
+  isLoading = false,
+}: Props) {
   function updateTask(updated: PlanTask) {
     onUpdate(tasks.map((t) => (t.id === updated.id ? updated : t)));
   }
@@ -85,25 +99,34 @@ export default function PlanBoard({ tasks, onUpdate }: Props) {
             </span>
 
             <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-0.5">
-              {items.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onUpdate={updateTask}
-                  onDelete={deleteTask}
-                  variant="card"
-                  accentCls={phase.accent}
-                />
-              ))}
+              {isLoading ? (
+                <>
+                  <SkeletonCard />
+                  <SkeletonCard />
+                </>
+              ) : (
+                <>
+                  {items.map((task) => (
+                    <TaskItem
+                      key={task.id}
+                      task={task}
+                      onUpdate={updateTask}
+                      onDelete={deleteTask}
+                      variant="card"
+                      accentCls={phase.accent}
+                    />
+                  ))}
 
-              <button
-                type="button"
-                onClick={() => addTask(phase)}
-                className={`flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed bg-white/40 py-2.5 text-[13px] font-medium transition-colors ${phase.add}`}
-              >
-                <Plus size={14} />
-                Add New Task
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => addTask(phase)}
+                    className={`flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed bg-white/40 py-2.5 text-[13px] font-medium transition-colors ${phase.add}`}
+                  >
+                    <Plus size={14} />
+                    Add New Task
+                  </button>
+                </>
+              )}
             </div>
           </div>
         );

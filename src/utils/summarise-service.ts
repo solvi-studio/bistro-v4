@@ -1,12 +1,17 @@
-import type { ConceptMeta, ShotData } from "@/types/summarise";
+import {
+  dbClearSummary,
+  dbGetGraph,
+  dbGetResult,
+  dbGetSummaryStatus,
+  dbSaveGraph,
+  dbSaveResult,
+  dbSetError,
+} from "@/lib/db/actions/summary";
+import type { ConceptMeta, ShotData, SummariseResult } from "@/types/summarise";
 import type { MindMapGraph } from "@/utils/mindmap-export";
-import { storage } from "@/utils/storage";
 
-// Result the summarise page renders.
-export interface SummariseResult {
-  meta: ConceptMeta;
-  shots: ShotData[];
-}
+// Re-export so callers don't need to change their import path.
+export type { SummariseResult };
 
 // One scene in the backend storyboard breakdown.
 interface SceneApiResponse {
@@ -18,8 +23,6 @@ interface SceneApiResponse {
 }
 
 // Shape returned by `POST /api/v1/summary`.
-// The endpoint returns only `scenes`; it no longer carries concept/tone/
-// audience meta. ConceptMeta is sourced elsewhere (see utils/plan.ts).
 interface SummaryApiResponse {
   scenes: SceneApiResponse[];
 }
@@ -27,40 +30,36 @@ interface SummaryApiResponse {
 type SummariseStatus = "pending" | "done" | "error";
 
 // Same-origin Next.js route handler that proxies to the backend server-side.
-// The real backend URL (API_URL) never reaches the browser.
 const SUMMARY_ENDPOINT = "/api/v1/summary";
-// Gemini summary + Cloud Run cold start can take well over a minute — keep this
-// comfortably under the Cloud Run request limit (300s) but long enough not to
-// abort a healthy-but-slow call.
 const REQUEST_TIMEOUT_MS = 150000;
-// One automatic retry smooths over cold starts and transient network blips.
 const MAX_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 1500;
 
-// Persisted so a page reload can resume the job (graph snapshot + status, plus
-// the result once it lands). Routed through the storage seam — swappable to a
-// DB later without touching call sites.
-const STATUS_KEY = "bistro_summarise_status";
-const GRAPH_KEY = "bistro_summarise_graph";
-const RESULT_KEY = "bistro_summarise_result";
+// ── In-memory status cache (sync snapshot for useSyncExternalStore) ──────────
+// Keyed by clientId. Populated on first fetch and updated after every mutation.
+// Empty on fresh page load — callers must call initSummaryStatus to warm it.
+const statusCache = new Map<string, SummariseStatus | null>();
 
-// In-memory handle for the request in flight *this* session. After a reload it
-// is gone, and we rebuild it from the persisted graph instead.
-let pending: Promise<SummariseResult> | null = null;
+// In-flight request handles — survive route changes within the same tab session.
+const pendingRequests = new Map<string, Promise<SummariseResult>>();
 
-// ── Status accessor + change subscription ───────────────────────────────────
-// The creative-flow sidebar gates the Summarise/Plan tabs on this status. Same-
-// tab storage writes don't fire `storage` events, so notify subscribers here.
 const statusListeners = new Set<() => void>();
 
-function setStatus(status: SummariseStatus | null): void {
-  if (status === null) storage.remove(STATUS_KEY);
-  else storage.write<SummariseStatus>(STATUS_KEY, status);
+function notifyStatusListeners(): void {
   for (const cb of statusListeners) cb();
 }
 
-export function getSummaryStatus(): SummariseStatus | null {
-  return storage.read<SummariseStatus | null>(STATUS_KEY, null);
+function setCacheStatus(
+  clientId: string,
+  status: SummariseStatus | null,
+): void {
+  if (status === null) statusCache.delete(clientId);
+  else statusCache.set(clientId, status);
+  notifyStatusListeners();
+}
+
+export function getSummaryStatus(clientId: string): SummariseStatus | null {
+  return statusCache.get(clientId) ?? null;
 }
 
 export function subscribeSummaryStatus(cb: () => void): () => void {
@@ -68,17 +67,21 @@ export function subscribeSummaryStatus(cb: () => void): () => void {
   return () => statusListeners.delete(cb);
 }
 
+// Warms the cache from DB on mount — call when the component that uses
+// useSyncExternalStore first renders (e.g. CreativeHelperSidebar).
+export async function initSummaryStatus(clientId: string): Promise<void> {
+  if (statusCache.has(clientId)) return; // already warmed
+  const status = await dbGetSummaryStatus(clientId);
+  setCacheStatus(clientId, status);
+}
+
 // ── scenes → shot rows ─────────────────────────────────────────────────────
-// The endpoint returns structured scenes. Map each onto a ShotData row:
-//   visual → shootingStyle (there is no separate `time` field anymore).
-// `script` is a single string backend-side, so wrap it for the table's
-// line-per-entry rendering (split on newlines when present).
+
 function sceneToRow(scene: SceneApiResponse, i: number): ShotData {
   const lines = scene.script
     .split(/\n+/)
     .map((s) => s.trim())
     .filter(Boolean);
-
   return {
     shotNumber: i + 1,
     time: undefined,
@@ -89,20 +92,15 @@ function sceneToRow(scene: SceneApiResponse, i: number): ShotData {
   };
 }
 
-// The /summary endpoint no longer returns concept/tone/audience, so meta is
-// left blank here — the consumers that need it read from their own store.
 function mapResponse(res: SummaryApiResponse): SummariseResult {
   return {
-    meta: {
-      projectName: "Your Idea",
-    },
+    meta: { projectName: "Your Idea" } as ConceptMeta,
     shots: (res.scenes ?? []).map(sceneToRow),
   };
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// 4xx (except 408/429) are caller errors — retrying won't help.
 function isRetryable(status: number): boolean {
   return status === 408 || status === 429 || status >= 500;
 }
@@ -110,7 +108,6 @@ function isRetryable(status: number): boolean {
 async function attemptSummary(graph: MindMapGraph): Promise<SummariseResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
   try {
     const res = await fetch(SUMMARY_ENDPOINT, {
       method: "POST",
@@ -121,7 +118,6 @@ async function attemptSummary(graph: MindMapGraph): Promise<SummariseResult> {
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
       const err = new Error(`summary failed (${res.status}): ${detail}`);
-      // Tag so the retry loop knows whether to bother.
       (err as Error & { retryable?: boolean }).retryable = isRetryable(
         res.status,
       );
@@ -130,7 +126,6 @@ async function attemptSummary(graph: MindMapGraph): Promise<SummariseResult> {
     const json = (await res.json()) as SummaryApiResponse;
     return mapResponse(json);
   } catch (err) {
-    // Our own timeout surfaces as an AbortError — relabel it clearly.
     if (err instanceof DOMException && err.name === "AbortError") {
       const e = new Error("The summary took too long to generate.");
       (e as Error & { retryable?: boolean }).retryable = true;
@@ -150,7 +145,7 @@ async function fetchSummary(graph: MindMapGraph): Promise<SummariseResult> {
     } catch (err) {
       lastErr = err;
       const retryable =
-        (err as Error & { retryable?: boolean }).retryable ?? true; // network errors have no flag → retry
+        (err as Error & { retryable?: boolean }).retryable ?? true;
       if (!retryable || attempt === MAX_ATTEMPTS) break;
       await sleep(RETRY_DELAY_MS);
     }
@@ -160,64 +155,70 @@ async function fetchSummary(graph: MindMapGraph): Promise<SummariseResult> {
     : new Error("summary request failed");
 }
 
-// Run the request and persist status + result as it resolves, so a reload can
-// pick up the outcome.
-function run(graph: MindMapGraph): Promise<SummariseResult> {
-  return fetchSummary(graph)
+function run(graph: MindMapGraph, clientId: string): Promise<SummariseResult> {
+  const p = fetchSummary(graph)
     .then((result) => {
-      storage.write<SummariseResult>(RESULT_KEY, result);
-      setStatus("done");
+      dbSaveResult(clientId, result).catch(console.error);
+      setCacheStatus(clientId, "done");
+      pendingRequests.delete(clientId);
       return result;
     })
     .catch((err: unknown) => {
-      setStatus("error");
+      dbSetError(clientId).catch(console.error);
+      setCacheStatus(clientId, "error");
+      pendingRequests.delete(clientId);
       throw err instanceof Error ? err : new Error("summary request failed");
     });
+  pendingRequests.set(clientId, p);
+  return p;
 }
 
-// Called from the mind-map "Finalise" action. Snapshots the graph and kicks
-// off the request.
-export function submitMindMap(graph: MindMapGraph): void {
-  storage.write<MindMapGraph>(GRAPH_KEY, graph);
-  storage.remove(RESULT_KEY);
-  setStatus("pending");
-  pending = run(graph);
+// Called from the mind-map "Finalise" action. Snapshots graph to DB and starts
+// the request. Fire-and-forget from the caller.
+export async function submitMindMap(
+  graph: MindMapGraph,
+  clientId: string,
+): Promise<void> {
+  setCacheStatus(clientId, "pending");
+  await dbSaveGraph(clientId, graph);
+  run(graph, clientId);
 }
 
-// Called from the summarise page. Returns a promise for the result, surviving
-// reloads:
-//   • request in flight this session → return it
-//   • finished in a prior session    → resolve the stored result
-//   • pending/error after a reload   → re-issue from the saved graph snapshot
-//   • never submitted                → null (page bounces back to the canvas)
-export function resumeSummary(): Promise<SummariseResult> | null {
-  if (pending) return pending;
+// Called from the summarise page. Returns the result promise (or null = not
+// submitted). Survives reloads via the DB-persisted graph + status.
+export async function resumeSummary(
+  clientId: string,
+): Promise<SummariseResult | null> {
+  // In-flight this session — return the same promise.
+  const inflight = pendingRequests.get(clientId);
+  if (inflight) return inflight;
 
-  const status = storage.read<SummariseStatus | null>(STATUS_KEY, null);
+  const status = await dbGetSummaryStatus(clientId);
+  setCacheStatus(clientId, status);
+
   if (!status) return null;
 
   if (status === "done") {
-    const saved = storage.read<SummariseResult | null>(RESULT_KEY, null);
-    if (saved) return Promise.resolve(saved);
+    const saved = await dbGetResult(clientId);
+    if (saved) return saved;
   }
 
-  // pending (interrupted by reload) or error → retry from the snapshot.
-  const graph = storage.read<MindMapGraph | null>(GRAPH_KEY, null);
+  // pending (interrupted reload) or error → re-issue from saved graph snapshot.
+  const graph = await dbGetGraph(clientId);
   if (!graph) return null;
-  pending = run(graph);
-  return pending;
+  return run(graph, clientId);
 }
 
-// The last completed summary result, if any. The plan stage reads this to seed
-// its planner input. Returns null until a summary has landed.
-export function getSummaryResult(): SummariseResult | null {
-  return storage.read<SummariseResult | null>(RESULT_KEY, null);
+// Returns the persisted summary result for plan generation.
+export async function getSummaryResult(
+  clientId: string,
+): Promise<SummariseResult | null> {
+  return dbGetResult(clientId);
 }
 
-// Clear a finished/failed job (e.g. when the user starts a fresh idea).
-export function clearSummary(): void {
-  pending = null;
-  storage.remove(GRAPH_KEY);
-  storage.remove(RESULT_KEY);
-  setStatus(null);
+// Clear a finished/failed job so the user can start a new one.
+export async function clearSummary(clientId: string): Promise<void> {
+  pendingRequests.delete(clientId);
+  setCacheStatus(clientId, null);
+  await dbClearSummary(clientId);
 }

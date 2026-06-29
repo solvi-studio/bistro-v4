@@ -1,6 +1,6 @@
 import type { Edge, Node, Viewport } from "@xyflow/react";
 import type { ContentNodeData } from "@/components/mind-map/nodes/ContentNode";
-import { getScripts } from "@/utils/creative";
+import { getIdeaByClientId } from "@/lib/db/actions/ideas";
 
 function downloadJSON(filename: string, data: unknown) {
   const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -78,12 +78,12 @@ export interface MindMapGraph {
   globalNotes: string[];
 }
 
-function buildMindMapGraph(
+async function buildMindMapGraph(
   nodes: Node[],
   edges: Edge[],
   scriptId?: string,
-): MindMapGraph {
-  const script = scriptId ? getScripts().find((s) => s.id === scriptId) : null;
+): Promise<MindMapGraph> {
+  const script = scriptId ? await getIdeaByClientId(scriptId) : null;
   const project = {
     name: script?.title ?? "Untitled",
     goal: script?.goal ?? "",
@@ -224,22 +224,22 @@ function buildMindMapGraph(
 }
 
 // ── Export 2: Backend payload (sent to /api/v1/summary) ─────────────────────
-export function exportMindMapGraph(
+export async function exportMindMapGraph(
   nodes: Node[],
   edges: Edge[],
   scriptId?: string,
-): MindMapGraph {
+): Promise<MindMapGraph> {
   return buildMindMapGraph(nodes, edges, scriptId);
 }
 
 // ── Export 3: Downloadable AI context file ───────────────────────────────────
-export function exportMindMapForAI(
+export async function exportMindMapForAI(
   nodes: Node[],
   edges: Edge[],
   scriptId?: string,
 ) {
   downloadJSON(
     `mindmap-ai-${Date.now()}.json`,
-    buildMindMapGraph(nodes, edges, scriptId),
+    await buildMindMapGraph(nodes, edges, scriptId),
   );
 }

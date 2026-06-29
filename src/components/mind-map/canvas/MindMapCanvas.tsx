@@ -26,8 +26,8 @@ import {
   type TopicDragPayload,
   VIDEO_DND_MIME,
 } from "@/components/mind-map/utils/spawnTopic";
+import { loadCanvas, saveCanvas } from "@/lib/db/actions/mindmap";
 import { pickHandles } from "@/utils/mind-map-handles";
-import { loadCanvas, saveCanvas } from "@/utils/mind-map-store";
 import { exportMindMapGraph } from "@/utils/mindmap-export";
 import { submitMindMap } from "@/utils/summarise-service";
 import "@xyflow/react/dist/style.css";
@@ -69,7 +69,11 @@ function buildSceneChainOrder(nodes: Node[], edges: Edge[]): string[] {
   const sceneNext = new Map<string, string>();
   const sceneEdgeTargets = new Set<string>();
   for (const e of edges) {
-    if (e.type === "sceneEdge" && sceneSet.has(e.source) && sceneSet.has(e.target)) {
+    if (
+      e.type === "sceneEdge" &&
+      sceneSet.has(e.source) &&
+      sceneSet.has(e.target)
+    ) {
       sceneNext.set(e.source, e.target);
       sceneEdgeTargets.add(e.target);
     }
@@ -131,21 +135,30 @@ function CanvasInner() {
 
   const restored = useRef(false);
   useEffect(() => {
-    const saved = loadCanvas(mapId);
-    if (saved) {
-      setNodes(saved.nodes);
-      setEdges(saved.edges);
-      if (saved.viewport) setViewport(saved.viewport);
-    }
-    restored.current = true;
+    restored.current = false;
+    loadCanvas(mapId)
+      .then((saved) => {
+        if (saved) {
+          setNodes(saved.nodes);
+          setEdges(saved.edges);
+          if (saved.viewport)
+            setViewport(saved.viewport as Parameters<typeof setViewport>[0]);
+        }
+      })
+      .catch(console.error)
+      .finally(() => {
+        restored.current = true;
+      });
   }, [mapId, setNodes, setEdges, setViewport]);
 
-  // Debounced autosave
+  // Debounced autosave (fire-and-forget — DB write)
   useEffect(() => {
     if (!restored.current) return;
     const t = setTimeout(() => {
-      saveCanvas(mapId, { nodes, edges, viewport: getViewport() });
-    }, 400);
+      saveCanvas(mapId, { nodes, edges, viewport: getViewport() }).catch(
+        console.error,
+      );
+    }, 800);
     return () => clearTimeout(t);
   }, [mapId, nodes, edges, getViewport]);
 
@@ -157,7 +170,8 @@ function CanvasInner() {
     const updated = nodes.map((n) => {
       if (n.type !== "scene") return n;
       const idx = ordered.indexOf(n.id);
-      const expected = idx >= 0 ? `Scene ${idx + 1}` : (n.data as { label?: string }).label;
+      const expected =
+        idx >= 0 ? `Scene ${idx + 1}` : (n.data as { label?: string }).label;
       if ((n.data as { label?: string }).label === expected) return n;
       needsUpdate = true;
       return { ...n, data: { ...n.data, label: expected } };
@@ -184,7 +198,7 @@ function CanvasInner() {
         nodes: getNodes(),
         edges: getEdges(),
         viewport: getViewport(),
-      });
+      }).catch(console.error);
     },
   });
 
@@ -273,16 +287,23 @@ function CanvasInner() {
   // ── Manual save ───────────────────────────────────────────────────────────
   const [savedFlash, setSavedFlash] = useState(false);
   const handleSave = useCallback(() => {
-    saveCanvas(mapId, { nodes, edges, viewport: getViewport() });
+    saveCanvas(mapId, { nodes, edges, viewport: getViewport() }).catch(
+      console.error,
+    );
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1500);
   }, [mapId, nodes, edges, getViewport]);
 
   // ── Finalise ──────────────────────────────────────────────────────────────
-  const handleFinalise = useCallback(() => {
+  const handleFinalise = useCallback(async () => {
     const scriptId = mapId !== "default" ? mapId : undefined;
-    submitMindMap(exportMindMapGraph(nodes, edges, scriptId));
-    console.log("Submitted graph:", exportMindMapGraph(nodes, edges));
+    try {
+      const graph = await exportMindMapGraph(nodes, edges, scriptId);
+      submitMindMap(graph, mapId).catch(console.error);
+    } catch (err) {
+      console.error("Failed to export mind map:", err);
+      return;
+    }
     const query =
       mapId !== "default" ? `?script=${encodeURIComponent(mapId)}` : "";
     router.push(`/summarise${query}`);
@@ -324,7 +345,12 @@ function CanvasInner() {
       } catch {
         return;
       }
-      spawnContentNode({ addNodes }, payload.category, payload.header, position);
+      spawnContentNode(
+        { addNodes },
+        payload.category,
+        payload.header,
+        position,
+      );
     },
     [screenToFlowPosition, addNodes],
   );
@@ -354,24 +380,29 @@ function CanvasInner() {
       onPointerUp={eraserHandlers.onPointerUp}
       onPointerLeave={eraserHandlers.onPointerLeave}
     >
-      <div className="absolute top-3 right-3 z-10 flex gap-2 pointer-events-auto">
-        <button
-          type="button"
-          title="Save canvas"
-          onClick={handleSave}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
-        >
-          <Save size={14} />
-          {savedFlash ? "Saved!" : "Save"}
-        </button>
-        <button
-          type="button"
-          title="Finalise idea and generate summary"
-          onClick={handleFinalise}
-          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-(--color-primary-hover)"
-        >
-          <Sparkles size={14} /> Finalise
-        </button>
+      <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-1 pointer-events-auto">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            title="Save canvas"
+            onClick={handleSave}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+          >
+            <Save size={14} />
+            {savedFlash ? "Saved!" : "Save"}
+          </button>
+          <button
+            type="button"
+            title="Finalise idea and generate summary"
+            onClick={handleFinalise}
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-(--color-primary-hover)"
+          >
+            <Sparkles size={14} /> Finalise
+          </button>
+        </div>
+        <p className="text-[11px] text-gray-400 text-right pointer-events-none">
+          Not saved automatically — click Save to keep changes.
+        </p>
       </div>
 
       <ReactFlow
