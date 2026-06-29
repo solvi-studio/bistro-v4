@@ -1,8 +1,9 @@
-import type { CreativeScript } from "@/types/creative";
-import type { CalendarEvent, EnrichedCalendarEvent, PlanPhase } from "@/types/plan";
-import { getScripts } from "@/utils/creative";
+import type {
+  CalendarEvent,
+  EnrichedCalendarEvent,
+  PlanPhase,
+} from "@/types/plan";
 import { notifyDataChange } from "@/utils/dataSync";
-import { getPlanTasks } from "@/utils/plan";
 import { storage } from "@/utils/storage";
 
 // Calendar-events repo — events are stored per folder (creative script), one
@@ -170,54 +171,3 @@ export function colorForScript(scriptId: string): ColorClasses {
 }
 
 // ── Aggregation (pure — unit-tested) ───────────────────────────────────────
-
-// Join events with their folder's title + colour; drop events whose folder no
-// longer exists so the calendar never renders orphans.
-export function enrich(
-  events: CalendarEvent[],
-  scripts: CreativeScript[],
-): EnrichedCalendarEvent[] {
-  const byId = new Map(scripts.map((s) => [s.id, s]));
-  return events.flatMap((e) => {
-    const script = byId.get(e.scriptId);
-    if (!script) return [];
-    return [
-      { ...e, scriptTitle: script.title, colorTag: script.colorTag ?? "blue" },
-    ];
-  });
-}
-
-// All calendar items across every folder: stored events PLUS scheduled plan
-// tasks (so a task with a date shows on the calendar in its folder's colour).
-export function getAllEvents(): EnrichedCalendarEvent[] {
-  const scripts = getScripts();
-  const out: EnrichedCalendarEvent[] = [];
-
-  for (const s of scripts) {
-    const colorTag = s.colorTag ?? "blue";
-
-    for (const e of loadEvents(s.id)) {
-      out.push({ ...e, scriptTitle: s.title, colorTag });
-    }
-
-    // Scheduled plan tasks → read-only calendar entries (tagged with taskId).
-    for (const t of getPlanTasks(s.id)) {
-      if (!t.scheduledDate) continue;
-      out.push({
-        id: `task-${t.id}`,
-        scriptId: s.id,
-        date: t.scheduledDate,
-        time: t.scheduledStartTime,
-        endTime: t.scheduledEndTime,
-        title: t.text,
-        notes: [],
-        scriptTitle: s.title,
-        colorTag,
-        taskId: t.id,
-        phase: t.phase,
-      });
-    }
-  }
-
-  return out;
-}

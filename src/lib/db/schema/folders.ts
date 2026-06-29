@@ -1,4 +1,4 @@
-import { jsonb, serial, text, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { jsonb, text, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm/relations";
 import { timestamps } from "../utils";
 import { nextJsAppSchema } from "./schema";
@@ -9,7 +9,7 @@ import { users } from "./users";
 export const folders = nextJsAppSchema.table(
   "folders",
   {
-    id: serial().primaryKey(),
+    id: uuid().defaultRandom().primaryKey(),
     userId: text().references(() => users.id),
     clientId: text(),
     name: varchar({ length: 255 }),

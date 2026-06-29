@@ -12,7 +12,7 @@ import type { MindMapGraph } from "@/utils/mindmap-export";
 async function resolveFolderId(
   userId: string,
   clientId: string,
-): Promise<number | null> {
+): Promise<string | null> {
   const [folder] = await db
     .select({ id: folders.id })
     .from(folders)
@@ -20,7 +20,7 @@ async function resolveFolderId(
   return folder?.id ?? null;
 }
 
-async function getSummaryRow(folderId: number) {
+async function getSummaryRow(folderId: string) {
   const [row] = await db
     .select()
     .from(summaries)
@@ -30,7 +30,7 @@ async function getSummaryRow(folderId: number) {
 
 type SummaryData = Partial<typeof summaries.$inferInsert>;
 
-async function upsertSummary(folderId: number, data: SummaryData) {
+async function upsertSummary(folderId: string, data: SummaryData) {
   const existing = await getSummaryRow(folderId);
   if (existing) {
     await db.update(summaries).set(data).where(eq(summaries.id, existing.id));

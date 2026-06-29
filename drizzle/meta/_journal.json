@@ -43,6 +43,13 @@
       "when": 1751068800000,
       "tag": "0005_db_persistence",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782692787084,
+      "tag": "0006_uuid_folder_pk",
+      "breakpoints": true
     }
   ]
 }
