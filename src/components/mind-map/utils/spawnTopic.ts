@@ -43,13 +43,22 @@ export function spawnContentNode(
 
   const pos = placeNode(occupied, anchor.x, anchor.y, 1, SPAWN_W, SPAWN_H);
 
-  const data: ContentNodeData = {
-    category,
-    header: trimmed,
-    body: "",
-    fontSize: 14,
-    width: SPAWN_W,
-  };
+  const data: ContentNodeData =
+    trimmed === "Timing"
+      ? {
+          category,
+          header: trimmed,
+          duration: "0:00",
+          fontSize: 14,
+          width: SPAWN_W,
+        }
+      : {
+          category,
+          header: trimmed,
+          body: "",
+          fontSize: 14,
+          width: SPAWN_W,
+        };
 
   rf.addNodes({
     id: `content-${category}-${Date.now()}`,
