@@ -23,8 +23,8 @@ const COLOR_MAP: Record<PlanTask["colorTag"], string> = {
 };
 
 function formatDate(iso: string): string {
-  const [year, month, day] = iso.split("-");
-  return `${day}/${month}/${year}`;
+  const [, month, day] = iso.split("-");
+  return `${day}/${month}`;
 }
 
 function formatTime(hhmm: string): string {
@@ -155,7 +155,7 @@ export default function TaskItem({
   if (variant === "card") {
     return (
       <div className="group relative">
-        <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-3.5 py-2.5 shadow-sm">
+        <div className="flex items-start gap-2 rounded-xl border border-gray-100 bg-white px-3.5 py-2.5 shadow-sm">
           {editing ? (
             <input
               // biome-ignore lint/a11y/noAutofocus: focus follows the user's click to edit
@@ -174,7 +174,7 @@ export default function TaskItem({
               type="button"
               onClick={startEdit}
               title="Click to edit"
-              className={`min-w-0 flex-1 truncate text-left text-[13px] font-medium ${accentCls ?? "text-gray-700"}`}
+              className={`min-w-0 flex-1 line-clamp-2 text-left text-[13px] font-medium ${accentCls ?? "text-gray-700"}`}
             >
               {task.text}
             </button>
