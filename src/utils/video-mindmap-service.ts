@@ -14,6 +14,11 @@ export interface VideoMindmapNode {
   content: string;
 }
 
+export interface VideoMindmapNode {
+  type: string;
+  content: string;
+}
+
 export interface VideoMindmapResult {
   nodeId: string;
   nodes: VideoMindmapNode[];
