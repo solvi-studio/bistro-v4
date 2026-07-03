@@ -48,7 +48,7 @@ export function spawnContentNode(
       ? {
           category,
           header: trimmed,
-          duration: "0:00",
+          duration: "0:10",
           fontSize: 14,
           width: SPAWN_W,
         }

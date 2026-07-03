@@ -288,11 +288,11 @@ export default function ContentNode({
             ) : (
               <button
                 type="button"
-                onClick={() => startEditingDuration(data.duration ?? "0:00")}
+                onClick={() => startEditingDuration(data.duration ?? "0:10")}
                 style={{ fontSize: data.fontSize ?? 14, color: theme.bodyText }}
                 className="hover:opacity-70 transition-opacity"
               >
-                {data.duration ?? "0:00"}
+                {data.duration ?? "0:10"}
               </button>
             )}
             {/* Display-only unit hint — never part of the stored value or any export. */}
