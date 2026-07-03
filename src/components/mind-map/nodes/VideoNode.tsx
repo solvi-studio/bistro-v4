@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type Edge,
   Handle,
   type Node,
   type NodeProps,
@@ -57,6 +58,28 @@ const CELL_H = 175;
 const GRID_GAP = 28;
 // Gap between the video node edge and the start of the result grid.
 const ANCHOR_GAP = 64;
+
+// Headers of content nodes already connected to this video node — used to
+// skip re-fetching/re-spawning a type that's already represented on the
+// canvas, whether it was spawned by this video node or manually connected.
+function connectedContentHeaders(
+  videoNodeId: string,
+  allNodes: Node[],
+  allEdges: Edge[],
+): Set<string> {
+  const contentIds = new Set<string>();
+  for (const e of allEdges) {
+    if (e.source === videoNodeId) contentIds.add(e.target);
+    else if (e.target === videoNodeId) contentIds.add(e.source);
+  }
+  const headers = new Set<string>();
+  for (const n of allNodes) {
+    if (n.type === "content" && contentIds.has(n.id)) {
+      headers.add((n.data as ContentNodeData).header);
+    }
+  }
+  return headers;
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -259,11 +282,33 @@ export default function VideoNode({
       startOffset: safeStart,
       endOffset: safeEnd,
     });
+
+    // Skip types that already have a connected content node — no need to
+    // re-fetch or re-spawn them.
+    const connectedHeaders = connectedContentHeaders(
+      id,
+      getNodes(),
+      getEdges(),
+    );
+    const typesToFetch = [...selectedTypes].filter((t) => {
+      const mapping = TYPE_TO_CONTENT[t];
+      return mapping && !connectedHeaders.has(mapping.header);
+    });
+
+    if (typesToFetch.length === 0) {
+      updateNodeData(id, {
+        status: "done",
+        note: "These ideas are already on your canvas.",
+        resultCount: 0,
+      });
+      return;
+    }
+
     try {
       const result = await analyzeVideoMindmap(
         id,
         tiktokUrl,
-        [...selectedTypes],
+        typesToFetch,
         safeStart,
         safeEnd,
       );
@@ -282,7 +327,17 @@ export default function VideoNode({
         note: err instanceof Error ? err.message : "Analysis failed.",
       });
     }
-  }, [id, url, selectedTypes, start, end, updateNodeData, spawnResults]);
+  }, [
+    id,
+    url,
+    selectedTypes,
+    start,
+    end,
+    updateNodeData,
+    spawnResults,
+    getNodes,
+    getEdges,
+  ]);
 
   const analyzing = status === "analyzing";
 
