@@ -1,3 +1,8 @@
+-- Drop the orphan calendar_events table first — it's dead (no code references
+-- it, not tracked by any Drizzle schema file or migration) but its leftover
+-- FK to folders.id blocks the type change below. CASCADE removes that FK
+-- along with the table in one step.
+DROP TABLE IF EXISTS "nextjs_app_schema"."calendar_events" CASCADE;--> statement-breakpoint
 -- Drop FK constraints before changing column types (integer→uuid has no implicit cast).
 ALTER TABLE "nextjs_app_schema"."summaries" DROP CONSTRAINT "summaries_folder_id_folders_id_fk";--> statement-breakpoint
 ALTER TABLE "nextjs_app_schema"."tasks" DROP CONSTRAINT "tasks_folder_id_folders_id_fk";--> statement-breakpoint
