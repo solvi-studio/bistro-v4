@@ -80,17 +80,21 @@ export default function EventDetailPanel({
           [{draft.scriptTitle}]{" "}
         </span>
         {editingTitle ? (
-          <input
+          <textarea
             // biome-ignore lint/a11y/noAutofocus: user just clicked edit
             autoFocus
+            rows={2}
             value={titleDraft}
             onChange={(e) => setTitleDraft(e.target.value)}
             onBlur={commitTitle}
             onKeyDown={(e) => {
-              if (e.key === "Enter") commitTitle();
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                commitTitle();
+              }
               if (e.key === "Escape") setEditingTitle(false);
             }}
-            className="w-full rounded-md border border-gray-300 px-1.5 py-0.5 text-base font-semibold leading-snug text-gray-900 outline-none focus:border-primary"
+            className="w-full resize-none rounded-md border border-gray-300 px-1.5 py-0.5 text-base font-semibold leading-snug text-gray-900 outline-none focus:border-primary"
           />
         ) : (
           <button

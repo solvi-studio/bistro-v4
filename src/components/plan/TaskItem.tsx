@@ -155,58 +155,68 @@ export default function TaskItem({
   if (variant === "card") {
     return (
       <div className="group relative">
-        <div className="flex flex-col gap-1.5 rounded-xl border border-gray-100 bg-white px-3.5 py-2.5 shadow-sm">
-          <div className="flex items-start gap-2">
+        <div className="flex items-start gap-2 rounded-xl border border-gray-100 bg-white px-3.5 py-2.5 shadow-sm">
+          {/* Text — its own div, independent of the button/date column's width. */}
+          <div className="min-w-0 flex-1">
             {editing ? (
-              <input
+              <textarea
                 // biome-ignore lint/a11y/noAutofocus: focus follows the user's click to edit
                 autoFocus
+                rows={2}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onBlur={commitEdit}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") commitEdit();
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    commitEdit();
+                  }
                   if (e.key === "Escape") setEditing(false);
                 }}
-                className={`min-w-0 flex-1 bg-transparent text-[13px] font-medium outline-none ${accentCls ?? "text-gray-700"}`}
+                className={`w-full resize-none bg-transparent text-[13px] font-medium leading-snug outline-none ${accentCls ?? "text-gray-700"}`}
               />
             ) : (
               <button
                 type="button"
                 onClick={startEdit}
                 title="Click to edit"
-                className={`min-w-0 flex-1 line-clamp-2 text-left text-[13px] font-medium ${accentCls ?? "text-gray-700"}`}
+                className={`line-clamp-2 w-full text-left text-[13px] font-medium ${accentCls ?? "text-gray-700"}`}
               >
                 {task.text}
               </button>
             )}
-
-            <button
-              ref={calBtnRef}
-              type="button"
-              onClick={handleCalendarClick}
-              aria-label={task.scheduledDate ? "Change date" : "Add date"}
-              className="shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100"
-            >
-              <CalendarIcon size={15} />
-            </button>
-            {onDelete && (
-              <button
-                type="button"
-                onClick={() => onDelete(task.id)}
-                aria-label="Delete task"
-                className="shrink-0 rounded-md p-1 text-gray-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
-              >
-                <Trash2 size={15} />
-              </button>
-            )}
           </div>
 
-          {task.scheduledDate && (
-            <span className="w-fit shrink-0 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
-              {formatDate(task.scheduledDate)}
-            </span>
-          )}
+          {/* Buttons + date — grouped together on the right, date below the buttons. */}
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <div className="flex items-center gap-1">
+              <button
+                ref={calBtnRef}
+                type="button"
+                onClick={handleCalendarClick}
+                aria-label={task.scheduledDate ? "Change date" : "Add date"}
+                className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100"
+              >
+                <CalendarIcon size={15} />
+              </button>
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(task.id)}
+                  aria-label="Delete task"
+                  className="rounded-md p-1 text-gray-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
+                >
+                  <Trash2 size={15} />
+                </button>
+              )}
+            </div>
+
+            {task.scheduledDate && (
+              <span className="w-fit rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
+                {formatDate(task.scheduledDate)}
+              </span>
+            )}
+          </div>
         </div>
         {picker}
       </div>
