@@ -16,6 +16,7 @@ export type { SummariseResult };
 // One scene in the backend storyboard breakdown.
 interface SceneApiResponse {
   scene: string;
+  time: string;
   description: string;
   visual: string;
   audio: string;
@@ -84,7 +85,7 @@ function sceneToRow(scene: SceneApiResponse, i: number): ShotData {
     .filter(Boolean);
   return {
     shotNumber: i + 1,
-    time: undefined,
+    time: scene.time || undefined,
     description: scene.description,
     shootingStyle: scene.visual || "—",
     audio: scene.audio || "—",

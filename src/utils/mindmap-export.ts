@@ -19,6 +19,9 @@ function downloadJSON(filename: string, data: unknown) {
 function nodeContent(node: Node): string {
   if (node.type === "content") {
     const d = node.data as ContentNodeData;
+    if (d.header === "Timing") {
+      return `Timing: ${d.duration ?? "0:10"}`;
+    }
     // header + body so AI gets full context
     return [d.header, d.body].filter(Boolean).join(": ");
   }
@@ -176,11 +179,15 @@ async function buildMindMapGraph(
       } else if (target.type === "content") {
         // Content nodes group by their header as the hub label
         const d = target.data as ContentNodeData;
-        const body = d.body?.trim();
-        if (body) {
-          topics.push({ hubLabel: d.header, items: [body] });
+        if (d.header === "Timing") {
+          topics.push({ hubLabel: d.header, items: [d.duration ?? "0:10"] });
         } else {
-          notes.push(d.header);
+          const body = d.body?.trim();
+          if (body) {
+            topics.push({ hubLabel: d.header, items: [body] });
+          } else {
+            notes.push(d.header);
+          }
         }
       } else {
         const leafIds = (outEdges.get(targetId) ?? []).filter(

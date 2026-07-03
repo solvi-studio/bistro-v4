@@ -91,7 +91,7 @@ function dedupeKey(
   d: { body?: string; duration?: string },
 ): string {
   if (header === "Timing") {
-    return `${header}::${d.duration ?? "0:00"}`;
+    return `${header}::${d.duration ?? "0:10"}`;
   }
   return `${header}::${d.body ?? ""}`;
 }
@@ -175,7 +175,7 @@ export default function VideoNode({
 
         if (mapping.header === "Timing") {
           const match = content.match(DURATION_TOKEN);
-          const duration = match?.[0] ?? "0:00";
+          const duration = match?.[0] ?? "0:10";
           const key = dedupeKey(mapping.header, { duration });
           if (seen.has(key)) continue;
           pending.push({ mapping, duration });

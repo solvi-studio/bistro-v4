@@ -270,7 +270,7 @@ export default function ContentNode({
         </div>
 
         {isTimingNode ? (
-          <div className="flex flex-1 items-center gap-1.5 px-3 py-2 bg-white">
+          <div className="flex flex-1 items-center gap-1.5 px-8 py-2 bg-white">
             {editingDuration ? (
               <input
                 // biome-ignore lint/a11y/noAutofocus: user just clicked edit

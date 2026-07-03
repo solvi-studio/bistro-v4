@@ -97,6 +97,15 @@ src/
 - `AGENTS.md` - Contains Next.js 16 breaking changes notice
 - `README.md` - Development setup and migration status from WXT → Next.js
 
+## Git Workflow
+
+**Never run `git add` / `git commit` in this repo, including from Superpowers
+plan execution (writing-plans, subagent-driven-development, executing-plans)
+and any subagent you dispatch.** The user commits their own work in their own
+batches. Implement, lint, and verify — then stop and report; leave the
+working tree uncommitted. Pass this instruction explicitly to every
+implementer/fix subagent you dispatch, since subagents do not read this file.
+
 ## Common Tasks
 
 **Replay onboarding in dev**: Visit `/onboarding/reset` to clear state and restart
