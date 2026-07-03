@@ -23,8 +23,11 @@ export type ContentNodeData = {
   category: ContentCategory;
   /** Fixed label shown in the coloured header. */
   header: string;
-  /** User-editable body text. */
-  body: string;
+  /** User-editable body text. Absent for the "Timing" node, which uses
+   * `duration` instead. */
+  body?: string;
+  /** "M:SS" — only present on the "Timing" node. */
+  duration?: string;
   fontSize: number;
   /** User-set card width (persisted). Falls back to DEFAULT_W. */
   width?: number;
@@ -37,7 +40,7 @@ export type ContentNodeData = {
 
 export type ContentNodeType = Node<ContentNodeData, "content">;
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────
 
 const HANDLE_CLS =
   "!w-2.5 !h-2.5 !rounded-full !border-2 !border-white !bg-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-150";
@@ -68,7 +71,16 @@ const DEFAULT_MIN_H = 64;
 const MIN_W = 140;
 const MIN_H = 56;
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// "M:SS" or "MM:SS", seconds 00-59.
+const DURATION_PATTERN = /^\d{1,2}:\d{2}$/;
+
+function isValidDuration(v: string): boolean {
+  if (!DURATION_PATTERN.test(v)) return false;
+  const seconds = Number(v.split(":")[1]);
+  return seconds <= 59;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────
 
 export default function ContentNode({
   id,
@@ -77,11 +89,16 @@ export default function ContentNode({
 }: NodeProps<ContentNodeType>) {
   const { updateNodeData, deleteElements, getViewport } = useReactFlow();
   const theme = CATEGORY_THEME[data.category];
+  const isTimingNode = data.header === "Timing";
 
   const bodyRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const isEditingRef = useRef(false);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Timing-node duration editing.
+  const [editingDuration, setEditingDuration] = useState(false);
+  const [durationDraft, setDurationDraft] = useState("");
 
   // Sync external data.body → DOM when not editing (avoids overwriting mid-edit).
   useEffect(() => {
@@ -114,6 +131,23 @@ export default function ContentNode({
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Escape") bodyRef.current?.blur();
     e.stopPropagation();
+  }, []);
+
+  const startEditingDuration = useCallback((current: string) => {
+    setDurationDraft(current);
+    setEditingDuration(true);
+  }, []);
+
+  const commitDurationEdit = useCallback(() => {
+    const value = durationDraft.trim();
+    if (isValidDuration(value)) {
+      updateNodeData(id, { duration: value });
+    }
+    setEditingDuration(false);
+  }, [durationDraft, id, updateNodeData]);
+
+  const cancelDurationEdit = useCallback(() => {
+    setEditingDuration(false);
   }, []);
 
   // ── Custom bottom-right resize handle ────────────────────────────────────────
@@ -235,30 +269,61 @@ export default function ContentNode({
           {data.header}
         </div>
 
-        {/*
-          Editable body.
-          flex-1 fills to minHeight; no overflow-auto so it grows the card instead
-          of scrolling. break-words + whitespace-pre-wrap handles long text.
-        */}
-        {/* biome-ignore lint/a11y/noStaticElementInteractions: double-click to edit */}
-        <div
-          ref={bodyRef}
-          contentEditable={isEditing}
-          suppressContentEditableWarning
-          onDoubleClick={(e) => {
-            e.stopPropagation();
-            startEditing();
-          }}
-          onBlur={commitEdit}
-          onKeyDown={isEditing ? handleKeyDown : undefined}
-          style={{ fontSize: data.fontSize ?? 14, color: theme.bodyText }}
-          className={[
-            "flex-1 px-3 py-2 leading-snug bg-white min-h-[40px] break-words whitespace-pre-wrap",
-            "focus:outline-none",
-            isEditing ? "nodrag nopan cursor-text" : "cursor-default",
-            !data.body && !isEditing ? "opacity-30" : "",
-          ].join(" ")}
-        />
+        {isTimingNode ? (
+          <div className="flex flex-1 items-center gap-1.5 px-3 py-2 bg-white">
+            {editingDuration ? (
+              <input
+                // biome-ignore lint/a11y/noAutofocus: user just clicked edit
+                autoFocus
+                value={durationDraft}
+                onChange={(e) => setDurationDraft(e.target.value)}
+                onBlur={commitDurationEdit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitDurationEdit();
+                  if (e.key === "Escape") cancelDurationEdit();
+                }}
+                placeholder="M:SS"
+                className="nodrag nopan w-16 rounded-md border border-gray-300 px-1.5 py-0.5 text-sm text-gray-700 outline-none focus:border-gray-500"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => startEditingDuration(data.duration ?? "0:00")}
+                style={{ fontSize: data.fontSize ?? 14, color: theme.bodyText }}
+                className="hover:opacity-70 transition-opacity"
+              >
+                {data.duration ?? "0:00"}
+              </button>
+            )}
+            {/* Display-only unit hint — never part of the stored value or any export. */}
+            <span className="text-xs text-gray-400">seconds</span>
+          </div>
+        ) : (
+          /*
+            Editable body.
+            flex-1 fills to minHeight; no overflow-auto so it grows the card instead
+            of scrolling. break-words + whitespace-pre-wrap handles long text.
+          */
+          // biome-ignore lint/a11y/noStaticElementInteractions: double-click to edit
+          <div
+            ref={bodyRef}
+            contentEditable={isEditing}
+            suppressContentEditableWarning
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              startEditing();
+            }}
+            onBlur={commitEdit}
+            onKeyDown={isEditing ? handleKeyDown : undefined}
+            style={{ fontSize: data.fontSize ?? 14, color: theme.bodyText }}
+            className={[
+              "flex-1 px-3 py-2 leading-snug bg-white min-h-[40px] break-words whitespace-pre-wrap",
+              "focus:outline-none",
+              isEditing ? "nodrag nopan cursor-text" : "cursor-default",
+              !data.body && !isEditing ? "opacity-30" : "",
+            ].join(" ")}
+          />
+        )}
       </div>
 
       {/* Bottom-right drag handle — only visible when node is selected */}
