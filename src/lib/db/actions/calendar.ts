@@ -2,6 +2,7 @@
 
 import "server-only";
 import { eq } from "drizzle-orm";
+import { getPlanTasks, savePlanTasks } from "@/lib/db/actions/plan";
 import { requireUserId } from "@/lib/db/auth";
 import { db } from "@/lib/db/index";
 import { folders } from "@/lib/db/schema/folders";
@@ -46,4 +47,17 @@ export async function getCalendarTaskEvents(): Promise<
     }
   }
   return events;
+}
+
+// Patches one task inside a folder's plan array — used when a task-derived
+// calendar event's notes/location/reminders/time are edited from the
+// calendar page's detail panel (as opposed to the Plan board).
+export async function updateTaskFromCalendar(
+  clientId: string,
+  taskId: string,
+  patch: Partial<PlanTask>,
+): Promise<void> {
+  const tasks = await getPlanTasks(clientId);
+  const updated = tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t));
+  await savePlanTasks(clientId, updated);
 }

@@ -2,7 +2,10 @@
 
 import { ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getCalendarTaskEvents } from "@/lib/db/actions/calendar";
+import {
+  getCalendarTaskEvents,
+  updateTaskFromCalendar,
+} from "@/lib/db/actions/calendar";
 import { listIdeas } from "@/lib/db/actions/ideas";
 import type { CreativeScript } from "@/types/creative";
 import type {
@@ -12,7 +15,7 @@ import type {
   PlanPhase,
 } from "@/types/plan";
 import { addEvent, loadEvents, updateEvent } from "@/utils/calendar";
-import { subscribeDataChange } from "@/utils/dataSync";
+import { notifyDataChange, subscribeDataChange } from "@/utils/dataSync";
 import CalendarSidebar from "./CalendarSidebar";
 import CreateEventModal from "./CreateEventModal";
 import {
@@ -303,7 +306,20 @@ export default function CalendarPageClient() {
           onUpdate={(updated) => {
             // Strip enriched-only fields before persisting
             const { scriptTitle, colorTag, taskId, phase, ...base } = updated;
-            updateEvent(updated.scriptId, base as CalendarEvent);
+            if (taskId) {
+              updateTaskFromCalendar(updated.scriptId, taskId, {
+                scheduledDate: base.date,
+                scheduledStartTime: base.time,
+                scheduledEndTime: base.endTime,
+                notes: base.notes,
+                location: base.location,
+                reminders: base.reminders,
+              })
+                .then(() => notifyDataChange())
+                .catch(console.error);
+            } else {
+              updateEvent(updated.scriptId, base as CalendarEvent);
+            }
             setSelectedEvent(updated);
           }}
         />
