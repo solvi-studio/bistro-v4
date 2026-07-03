@@ -126,7 +126,15 @@ export default function CalendarPageClient() {
 
   function handleCreate(
     scriptId: string,
-    input: { date: string; title: string; notes: string[] },
+    input: {
+      date: string;
+      title: string;
+      notes: string[];
+      time?: string;
+      endTime?: string;
+      location?: string;
+      reminders?: string[];
+    },
   ) {
     addEvent(scriptId, input);
     refresh();

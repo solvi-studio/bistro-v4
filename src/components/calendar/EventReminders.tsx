@@ -3,7 +3,7 @@
 import { Bell, Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-const PRESETS = [
+export const PRESETS = [
   "15 min before",
   "30 min before",
   "1 hour before",

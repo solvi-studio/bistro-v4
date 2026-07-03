@@ -26,15 +26,26 @@ export function saveEvents(scriptId: string, events: CalendarEvent[]): void {
 
 export function addEvent(
   scriptId: string,
-  input: { date: string; title: string; notes?: string[]; time?: string },
+  input: {
+    date: string;
+    title: string;
+    notes?: string[];
+    time?: string;
+    endTime?: string;
+    location?: string;
+    reminders?: string[];
+  },
 ): CalendarEvent {
   const event: CalendarEvent = {
     id: `evt-${Date.now()}`,
     scriptId,
     date: input.date,
     time: input.time,
+    endTime: input.endTime,
     title: input.title,
     notes: input.notes ?? [],
+    location: input.location,
+    reminders: input.reminders,
   };
   saveEvents(scriptId, [...loadEvents(scriptId), event]);
   return event;
