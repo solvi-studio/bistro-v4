@@ -61,3 +61,14 @@ export async function updateTaskFromCalendar(
   const updated = tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t));
   await savePlanTasks(clientId, updated);
 }
+
+// Removes one task from a folder's plan array — used when a task-derived
+// calendar event is deleted from the calendar page's detail panel.
+export async function deleteTaskFromCalendar(
+  clientId: string,
+  taskId: string,
+): Promise<void> {
+  const tasks = await getPlanTasks(clientId);
+  const updated = tasks.filter((t) => t.id !== taskId);
+  await savePlanTasks(clientId, updated);
+}

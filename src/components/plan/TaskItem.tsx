@@ -155,55 +155,57 @@ export default function TaskItem({
   if (variant === "card") {
     return (
       <div className="group relative">
-        <div className="flex items-start gap-2 rounded-xl border border-gray-100 bg-white px-3.5 py-2.5 shadow-sm">
-          {editing ? (
-            <input
-              // biome-ignore lint/a11y/noAutofocus: focus follows the user's click to edit
-              autoFocus
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commitEdit}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") commitEdit();
-                if (e.key === "Escape") setEditing(false);
-              }}
-              className={`min-w-0 flex-1 bg-transparent text-[13px] font-medium outline-none ${accentCls ?? "text-gray-700"}`}
-            />
-          ) : (
+        <div className="flex flex-col gap-1.5 rounded-xl border border-gray-100 bg-white px-3.5 py-2.5 shadow-sm">
+          <div className="flex items-start gap-2">
+            {editing ? (
+              <input
+                // biome-ignore lint/a11y/noAutofocus: focus follows the user's click to edit
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={commitEdit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitEdit();
+                  if (e.key === "Escape") setEditing(false);
+                }}
+                className={`min-w-0 flex-1 bg-transparent text-[13px] font-medium outline-none ${accentCls ?? "text-gray-700"}`}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={startEdit}
+                title="Click to edit"
+                className={`min-w-0 flex-1 line-clamp-2 text-left text-[13px] font-medium ${accentCls ?? "text-gray-700"}`}
+              >
+                {task.text}
+              </button>
+            )}
+
             <button
+              ref={calBtnRef}
               type="button"
-              onClick={startEdit}
-              title="Click to edit"
-              className={`min-w-0 flex-1 line-clamp-2 text-left text-[13px] font-medium ${accentCls ?? "text-gray-700"}`}
+              onClick={handleCalendarClick}
+              aria-label={task.scheduledDate ? "Change date" : "Add date"}
+              className="shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100"
             >
-              {task.text}
+              <CalendarIcon size={15} />
             </button>
-          )}
+            {onDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(task.id)}
+                aria-label="Delete task"
+                className="shrink-0 rounded-md p-1 text-gray-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
+              >
+                <Trash2 size={15} />
+              </button>
+            )}
+          </div>
 
           {task.scheduledDate && (
-            <span className="shrink-0 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
+            <span className="w-fit shrink-0 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
               {formatDate(task.scheduledDate)}
             </span>
-          )}
-
-          <button
-            ref={calBtnRef}
-            type="button"
-            onClick={handleCalendarClick}
-            aria-label={task.scheduledDate ? "Change date" : "Add date"}
-            className="shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100"
-          >
-            <CalendarIcon size={15} />
-          </button>
-          {onDelete && (
-            <button
-              type="button"
-              onClick={() => onDelete(task.id)}
-              aria-label="Delete task"
-              className="shrink-0 rounded-md p-1 text-gray-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
-            >
-              <Trash2 size={15} />
-            </button>
           )}
         </div>
         {picker}

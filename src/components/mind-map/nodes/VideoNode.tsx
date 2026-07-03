@@ -15,7 +15,7 @@ import {
   Loader2,
   Sparkles,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   CATEGORY_THEME,
   TYPE_TO_CONTENT,
@@ -98,6 +98,22 @@ export default function VideoNode({
   );
   const [start, setStart] = useState(data.startOffset ?? 0);
   const [end, setEnd] = useState(data.endOffset ?? 30);
+
+  // A persisted "analyzing" status only ever means the page reloaded (or the
+  // canvas was reopened) mid-request — the in-flight fetch died with the old
+  // page, so there's nothing left to wait for. Reset it once on mount so the
+  // node isn't stuck showing a permanent spinner with no way to retry.
+  // Mount-only: recovers stale persisted state, must not react to status
+  // changes from a real in-session analysis run.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally mount-only
+  useEffect(() => {
+    if (data.status === "analyzing") {
+      updateNodeData(id, {
+        status: "error",
+        note: "Analysis was interrupted by a page reload. Try again.",
+      });
+    }
+  }, []);
 
   const toggleType = useCallback(
     (type: VideoAnalysisType) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronsRight } from "lucide-react";
+import { ChevronsRight, Trash2 } from "lucide-react";
 import { useState } from "react";
 import type { EnrichedCalendarEvent } from "@/types/plan";
 import EventLocationEditor from "./EventLocationEditor";
@@ -18,11 +18,19 @@ interface Props {
   event: EnrichedCalendarEvent;
   onClose: () => void;
   onUpdate: (updated: EnrichedCalendarEvent) => void;
+  onDelete: (event: EnrichedCalendarEvent) => void;
 }
 
-export default function EventDetailPanel({ event, onClose, onUpdate }: Props) {
+export default function EventDetailPanel({
+  event,
+  onClose,
+  onUpdate,
+  onDelete,
+}: Props) {
   // Local draft — kept in sync via key remount (CalendarPageClient passes key={event.id})
   const [draft, setDraft] = useState<EnrichedCalendarEvent>(event);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(event.title);
 
   function patch(updates: Partial<EnrichedCalendarEvent>) {
     const updated = { ...draft, ...updates };
@@ -30,27 +38,70 @@ export default function EventDetailPanel({ event, onClose, onUpdate }: Props) {
     onUpdate(updated);
   }
 
+  function startEditingTitle() {
+    setTitleDraft(draft.title);
+    setEditingTitle(true);
+  }
+
+  function commitTitle() {
+    const text = titleDraft.trim();
+    if (text) patch({ title: text });
+    setEditingTitle(false);
+  }
+
   return (
     <aside className="flex w-85 shrink-0 flex-col border-l border-gray-100 bg-white p-5 overflow-y-auto font-(--font-poppins)">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <span className="text-sm font-semibold text-gray-500">Event</span>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close panel"
-          className="grid h-7 w-7 place-items-center rounded-lg text-gray-400 hover:bg-gray-100"
-        >
-          <ChevronsRight size={16} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onDelete(draft)}
+            aria-label="Delete task"
+            className="grid h-7 w-7 place-items-center rounded-lg text-gray-300 hover:bg-rose-50 hover:text-rose-500"
+          >
+            <Trash2 size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close panel"
+            className="grid h-7 w-7 place-items-center rounded-lg text-gray-400 hover:bg-gray-100"
+          >
+            <ChevronsRight size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Title */}
       <div className="mb-1">
-        <p className="text-base font-semibold leading-snug text-gray-900">
-          <span className="text-amber-500">[{draft.scriptTitle}]</span>{" "}
-          {draft.title}
-        </p>
+        <span className="text-amber-500 text-base font-semibold">
+          [{draft.scriptTitle}]{" "}
+        </span>
+        {editingTitle ? (
+          <input
+            // biome-ignore lint/a11y/noAutofocus: user just clicked edit
+            autoFocus
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onBlur={commitTitle}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitTitle();
+              if (e.key === "Escape") setEditingTitle(false);
+            }}
+            className="w-full rounded-md border border-gray-300 px-1.5 py-0.5 text-base font-semibold leading-snug text-gray-900 outline-none focus:border-primary"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={startEditingTitle}
+            title="Click to edit"
+            className="text-left text-base font-semibold leading-snug text-gray-900 hover:text-primary transition-colors"
+          >
+            {draft.title}
+          </button>
+        )}
       </div>
 
       {draft.phase && (

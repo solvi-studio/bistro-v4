@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  deleteTaskFromCalendar,
   getCalendarTaskEvents,
   updateTaskFromCalendar,
 } from "@/lib/db/actions/calendar";
@@ -14,7 +15,12 @@ import type {
   EnrichedCalendarEvent,
   PlanPhase,
 } from "@/types/plan";
-import { addEvent, loadEvents, updateEvent } from "@/utils/calendar";
+import {
+  addEvent,
+  deleteEvent,
+  loadEvents,
+  updateEvent,
+} from "@/utils/calendar";
 import { notifyDataChange, subscribeDataChange } from "@/utils/dataSync";
 import CalendarSidebar from "./CalendarSidebar";
 import CreateEventModal from "./CreateEventModal";
@@ -316,6 +322,7 @@ export default function CalendarPageClient() {
             const { scriptTitle, colorTag, taskId, phase, ...base } = updated;
             if (taskId) {
               updateTaskFromCalendar(updated.scriptId, taskId, {
+                text: base.title,
                 scheduledDate: base.date,
                 scheduledStartTime: base.time,
                 scheduledEndTime: base.endTime,
@@ -329,6 +336,16 @@ export default function CalendarPageClient() {
               updateEvent(updated.scriptId, base as CalendarEvent);
             }
             setSelectedEvent(updated);
+          }}
+          onDelete={(target) => {
+            if (target.taskId) {
+              deleteTaskFromCalendar(target.scriptId, target.taskId)
+                .then(() => notifyDataChange())
+                .catch(console.error);
+            } else {
+              deleteEvent(target.scriptId, target.id);
+            }
+            setSelectedEvent(null);
           }}
         />
       )}
