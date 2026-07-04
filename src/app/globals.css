@@ -39,7 +39,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -53,6 +52,14 @@ body {
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+}
+
+/* Remove the 1px solid #1a192b border React Flow bakes into node-default CSS.
+   Our leafNodeStyle already sets border:none inline; this kills RF's class-level
+   border for any node that somehow lacks the inline style (e.g. mid-migration). */
+.react-flow__node-default {
+  border: none;
+  outline: none;
 }
 
 /* Mind-map: node currently under a dragged node (hover-to-connect target). */

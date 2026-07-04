@@ -3,9 +3,8 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { SummariseLoadState } from "@/types/summarise";
-import { resumeSummary, type SummariseResult } from "@/utils/summarise-service";
-import ConceptMetaBar from "./ConceptMetaBar";
+import type { SummariseLoadState, SummariseResult } from "@/types/summarise";
+import { resumeSummary } from "@/utils/summarise-service";
 import ShotTable from "./ShotTable";
 import SummariseSkeleton from "./SummariseSkeleton";
 
@@ -22,20 +21,15 @@ export default function SummarisePageClient() {
 
   useEffect(() => {
     let cancelled = false;
-    // Resumes across reloads: returns the in-flight request, the stored result,
-    // or a fresh re-fetch from the saved graph snapshot.
-    const pending = resumeSummary();
+    const clientId = script ?? "default";
 
-    // Never submitted (e.g. direct visit) — nothing to show, bounce back.
-    if (!pending) {
-      router.replace(`/mind-map${scriptQuery}`);
-      return;
-    }
-
-    // Wait for the real backend result; skeleton animates until it lands.
-    pending
+    resumeSummary(clientId)
       .then((result) => {
         if (cancelled) return;
+        if (result === null) {
+          router.replace(`/brainstorm${scriptQuery}`);
+          return;
+        }
         setData(result);
         setLoadState("ready");
       })
@@ -44,10 +38,11 @@ export default function SummarisePageClient() {
         setErrorMsg(err instanceof Error ? err.message : "Request failed");
         setLoadState("error");
       });
+
     return () => {
       cancelled = true;
     };
-  }, [router, scriptQuery]);
+  }, [router, scriptQuery, script]);
 
   return (
     <div
@@ -73,10 +68,6 @@ export default function SummarisePageClient() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
           >
-            {/* Skeleton project badge */}
-            <div className="px-6 pt-5 pb-4 shrink-0 border-b border-gray-100 flex items-center gap-3">
-              <div className="animate-shimmer h-6 w-28 rounded-full" />
-            </div>
             <SummariseSkeleton />
           </motion.div>
         ) : loadState === "error" ? (
@@ -95,14 +86,14 @@ export default function SummarisePageClient() {
               running, then try again.
             </p>
             {errorMsg && (
-              <p className="mt-2 max-w-md text-xs text-gray-400 break-words">
+              <p className="mt-2 max-w-md text-xs text-gray-400 wrap-break-word">
                 {errorMsg}
               </p>
             )}
             <button
               type="button"
-              onClick={() => router.push(`/mind-map${scriptQuery}`)}
-              className="mt-6 px-6 py-2.5 rounded-full bg-[var(--color-primary)] text-white text-sm hover:bg-[var(--color-primary-hover)] transition-colors"
+              onClick={() => router.push(`/brainstorm${scriptQuery}`)}
+              className="mt-6 px-6 py-2.5 rounded-full bg-primary text-white text-sm hover:bg-(--color-primary-hover) transition-colors"
               style={{ fontWeight: 600 }}
             >
               Back to Canvas
@@ -116,54 +107,17 @@ export default function SummarisePageClient() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.35 }}
           >
-            {/* Project badge + concept meta accordion */}
-            <div className="px-6 pt-5 pb-3 shrink-0 border-b border-gray-100 flex flex-col items-start gap-3">
-              <motion.span
-                initial={{ opacity: 0, scale: 0.88 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.25 }}
-                className="inline-flex items-center gap-1.5 bg-[var(--color-primary)] text-white text-xs px-3 py-1.5 rounded-full shrink-0"
-                style={{ fontWeight: 600 }}
-              >
-                <svg
-                  width="10"
-                  height="10"
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  aria-hidden="true"
-                  role="img"
-                >
-                  <title>Project badge</title>
-                  <path
-                    d="M6 1l1.03 3.17L10.2 5l-3.17 1.03L6 9.2 4.97 6.03 1.8 5l3.17-1.03L6 1z"
-                    fill="white"
-                  />
-                </svg>
-                {data.meta.projectName}
-              </motion.span>
-
-              <ConceptMetaBar meta={data.meta} />
-            </div>
-
             {/* Scrollable table */}
             <div className="flex-1 overflow-y-auto overflow-x-auto min-h-0 px-6">
               <ShotTable shots={data.shots} />
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 flex justify-between shrink-0 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => router.push(`/mind-map${scriptQuery}`)}
-                className="px-6 py-2.5 rounded-full bg-gray-500 text-gray-100 text-sm hover:bg-gray-700 transition-colors"
-                style={{ fontWeight: 600 }}
-              >
-                Back to Canvas
-              </button>
+            <div className="px-6 py-4 flex justify-end shrink-0 border-t border-gray-100">
               <button
                 type="button"
                 onClick={() => router.push(`/plan${scriptQuery}`)}
-                className="px-6 py-2.5 rounded-full bg-[var(--color-primary)] text-white text-sm hover:bg-[var(--color-primary-hover)] transition-colors"
+                className="px-6 py-2.5 rounded-full bg-primary text-white text-sm hover:bg-(--color-primary-hover) transition-colors"
                 style={{ fontWeight: 600 }}
               >
                 Confirm

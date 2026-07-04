@@ -1,5 +1,4 @@
 import type { ShotData } from "@/types/summarise";
-import StoryboardCell from "./StoryboardCell";
 
 interface Props {
   shot: ShotData;
@@ -9,28 +8,27 @@ interface Props {
 export default function ShotTableRow({ shot, style }: Props) {
   return (
     <div
-      className="grid grid-cols-[80px_100px_1fr_120px_120px_1fr] gap-4 py-5 border-b border-gray-100 items-start"
+      className="grid grid-cols-[80px_90px_1fr_140px_140px_1fr] gap-6 py-5 border-b border-gray-100 items-start"
       style={style}
     >
-      <span className="text-sm text-gray-500 text-center pt-1">
+      <span className="text-sm text-gray-500 pt-0.5">
         {shot.shotNumber}
       </span>
 
-      <StoryboardCell
-        url={shot.storyboardUrl}
-        alt={`Shot ${shot.shotNumber} storyboard`}
-      />
+      <span className="text-sm text-gray-600 pt-0.5">
+        {shot.time ?? "—"}
+      </span>
 
       <p className="text-sm text-gray-600 leading-relaxed">
         {shot.description}
       </p>
 
-      <span className="text-sm text-gray-600 text-center">
+      <span className="text-sm text-gray-600">
         {shot.shootingStyle}
       </span>
 
-      <span className="text-sm text-gray-600 text-center">
-        {shot.cameraAngle}
+      <span className="text-sm text-gray-600">
+        {shot.audio}
       </span>
 
       <ul className="list-disc list-inside text-sm text-gray-600 leading-relaxed space-y-0.5">

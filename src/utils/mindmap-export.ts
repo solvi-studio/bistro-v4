@@ -1,13 +1,7 @@
 import type { Edge, Node, Viewport } from "@xyflow/react";
-import {
-  MIND_MAP_GROUPS,
-  type TopicSection,
-} from "@/components/mind-map/constants/topics";
-import type { ShapeData } from "@/components/mind-map/nodes/ShapeNode";
-import type { StickyData } from "@/components/mind-map/nodes/StickyNode";
-import type { TextBoxData } from "@/components/mind-map/nodes/TextBoxNode";
+import type { ContentNodeData } from "@/components/mind-map/nodes/ContentNode";
+import { getIdeaByClientId } from "@/lib/db/actions/ideas";
 
-// Append/remove pattern required for Firefox compatibility.
 function downloadJSON(filename: string, data: unknown) {
   const blob = new Blob([JSON.stringify(data, null, 2)], {
     type: "application/json",
@@ -22,29 +16,20 @@ function downloadJSON(filename: string, data: unknown) {
   URL.revokeObjectURL(url);
 }
 
-// Type-safe content extraction — each branch covers exactly one node type.
 function nodeContent(node: Node): string {
-  switch (node.type) {
-    case "sticky":
-      return (node.data as StickyData).text;
-    case "textbox":
-      return (node.data as TextBoxData).html.replace(/<[^>]+>/g, "");
-    case "shape":
-      return (node.data as ShapeData).text;
-    default:
-      // hub / leaf / idea nodes — ReactFlow default type: { label: string }
-      return (node.data as { label?: string }).label ?? "";
+  if (node.type === "content") {
+    const d = node.data as ContentNodeData;
+    if (d.header === "Timing") {
+      return `Timing: ${d.duration ?? "0:00"}`;
+    }
+    // header + body so AI gets full context
+    return [d.header, d.body].filter(Boolean).join(": ");
   }
+  return (node.data as { label?: string }).label ?? "";
 }
 
-type NodeSummary = {
-  id: string;
-  type: string;
-  subtype: string | null;
-  content: string;
-};
-
 // ── Export 1: Standard (reimportable) ──────────────────────────────────────
+
 export function exportMindMapJSON(
   nodes: Node[],
   edges: Edge[],
@@ -59,113 +44,209 @@ export function exportMindMapJSON(
   });
 }
 
-// ── AI context graph (shared shape) ────────────────────────────────────────
-// The structured payload describing the whole map: central idea, its hubs with
-// live leaves, free-floating nodes, and edge context. Both the backend submit
-// (`exportMindMapGraph`) and the downloadable AI export (`exportMindMapForAI`)
-// emit this exact shape.
+// ── Scene-oriented AI graph ─────────────────────────────────────────────────
 
-interface HubSummary {
-  hubId: string;
+export interface SceneTopic {
   hubLabel: string;
-  sections: TopicSection[];
-  liveLeaves: NodeSummary[];
+  items: string[];
 }
 
-interface EdgeContext {
+export interface VideoInspiration {
+  videoId: string;
+  insights: string[];
+}
+
+export interface SceneExport {
   id: string;
-  from: string;
-  fromContent: string;
-  to: string;
-  toContent: string;
-  hasArrow: boolean;
   label: string;
+  order: number;
+  /** Content nodes directly connected to this scene. */
+  topics: SceneTopic[];
+  /** Video analysis nodes connected to this scene, with their insight leaves. */
+  videoInspirations: VideoInspiration[];
+  /** Loose notes directly connected to this scene with no sub-structure. */
+  notes: string[];
 }
 
 export interface MindMapGraph {
   exportedAt: string;
-  centralIdea: string;
-  hubs: HubSummary[];
-  freeNodes: NodeSummary[];
-  edges: EdgeContext[];
+  project: {
+    name: string;
+    goal: string;
+    platform: string;
+  };
+  /** Scenes in chain order (derived from sceneEdge sequence). */
+  scenes: SceneExport[];
+  /** Nodes not reachable from any scene. */
+  globalNotes: string[];
 }
 
-function buildMindMapGraph(nodes: Node[], edges: Edge[]): MindMapGraph {
-  const ideaNode = nodes.find((n) => n.id === "idea");
-  const centralIdea = ideaNode ? nodeContent(ideaNode) : "";
+async function buildMindMapGraph(
+  nodes: Node[],
+  edges: Edge[],
+  scriptId?: string,
+): Promise<MindMapGraph> {
+  const script = scriptId ? await getIdeaByClientId(scriptId) : null;
+  const project = {
+    name: script?.title ?? "Untitled",
+    goal: script?.goal ?? "",
+    platform: script?.platform ?? "",
+  };
 
-  const nodeMap = new Map<string, NodeSummary>(
-    nodes.map((n) => [
-      n.id,
-      {
-        id: n.id,
-        type: n.type ?? "default",
-        subtype: n.type === "shape" ? (n.data as ShapeData).shape : null,
-        content: nodeContent(n),
-      },
-    ]),
-  );
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+  const contentOf = (id: string) => {
+    const n = nodeById.get(id);
+    return n ? nodeContent(n) : "";
+  };
 
-  const hubIds = new Set(
-    edges.filter((e) => e.source === "idea").map((e) => e.target),
-  );
+  const outEdges = new Map<string, string[]>();
+  const inEdges = new Map<string, string[]>();
+  const sceneEdgeTargets = new Set<string>();
 
-  const hubs: HubSummary[] = [...hubIds].map((hubId) => {
-    const staticGroup = MIND_MAP_GROUPS.find((g) => g.hubId === hubId);
-    const liveLeaves = edges
-      .filter((e) => e.source === hubId)
-      .map((e) => nodeMap.get(e.target))
-      .filter((n): n is NodeSummary => n !== undefined);
+  for (const edge of edges) {
+    const out = outEdges.get(edge.source) ?? [];
+    out.push(edge.target);
+    outEdges.set(edge.source, out);
+
+    const inc = inEdges.get(edge.target) ?? [];
+    inc.push(edge.source);
+    inEdges.set(edge.target, inc);
+
+    if (edge.type === "sceneEdge") sceneEdgeTargets.add(edge.target);
+  }
+
+  const sceneIds = nodes.filter((n) => n.type === "scene").map((n) => n.id);
+  const sceneSet = new Set(sceneIds);
+
+  const sceneNext = new Map<string, string>();
+  for (const edge of edges) {
+    if (
+      edge.type === "sceneEdge" &&
+      sceneSet.has(edge.source) &&
+      sceneSet.has(edge.target)
+    ) {
+      sceneNext.set(edge.source, edge.target);
+    }
+  }
+
+  const orderedSceneIds: string[] = [];
+  const visited = new Set<string>();
+
+  for (const rootId of sceneIds.filter((id) => !sceneEdgeTargets.has(id))) {
+    let cur: string | undefined = rootId;
+    while (cur && !visited.has(cur)) {
+      if (sceneSet.has(cur)) {
+        orderedSceneIds.push(cur);
+        visited.add(cur);
+      }
+      cur = sceneNext.get(cur);
+    }
+  }
+
+  for (const id of sceneIds) {
+    if (!visited.has(id)) orderedSceneIds.push(id);
+  }
+
+  const claimedIds = new Set<string>(sceneSet);
+
+  const scenes: SceneExport[] = orderedSceneIds.map((sceneId, idx) => {
+    const topics: SceneTopic[] = [];
+    const videoInspirations: VideoInspiration[] = [];
+    const notes: string[] = [];
+
+    const neighborIds = new Set([
+      ...(outEdges.get(sceneId) ?? []),
+      ...(inEdges.get(sceneId) ?? []),
+    ]);
+
+    for (const targetId of neighborIds) {
+      if (sceneSet.has(targetId)) continue;
+      const target = nodeById.get(targetId);
+      if (!target) continue;
+      claimedIds.add(targetId);
+
+      if (target.type === "videoDrop") {
+        const insightIds = outEdges.get(targetId) ?? [];
+        const insights = insightIds
+          .map((id) => {
+            claimedIds.add(id);
+            return contentOf(id);
+          })
+          .filter(Boolean);
+        if (insights.length > 0) {
+          videoInspirations.push({ videoId: targetId, insights });
+        }
+      } else if (target.type === "content") {
+        // Content nodes group by their header as the hub label
+        const d = target.data as ContentNodeData;
+        if (d.header === "Timing") {
+          topics.push({ hubLabel: d.header, items: [d.duration ?? "0:00"] });
+        } else {
+          const body = d.body?.trim();
+          if (body) {
+            topics.push({ hubLabel: d.header, items: [body] });
+          } else {
+            notes.push(d.header);
+          }
+        }
+      } else {
+        const leafIds = (outEdges.get(targetId) ?? []).filter(
+          (id) => !sceneSet.has(id),
+        );
+        if (leafIds.length > 0) {
+          const items = leafIds
+            .map((id) => {
+              claimedIds.add(id);
+              return contentOf(id);
+            })
+            .filter(Boolean);
+          topics.push({ hubLabel: contentOf(targetId), items });
+        } else {
+          notes.push(contentOf(targetId));
+        }
+      }
+    }
+
     return {
-      hubId,
-      hubLabel: nodeMap.get(hubId)?.content ?? hubId,
-      sections: staticGroup?.sections ?? [],
-      liveLeaves,
+      id: sceneId,
+      label: contentOf(sceneId),
+      order: idx + 1,
+      topics,
+      videoInspirations,
+      notes,
     };
   });
 
-  const structuredIds = new Set([
-    "idea",
-    ...hubIds,
-    ...hubs.flatMap((h) => h.liveLeaves.map((l) => l.id)),
-  ]);
-  const freeNodes = nodes
-    .filter((n) => !structuredIds.has(n.id))
-    .map((n) => nodeMap.get(n.id))
-    .filter((n): n is NodeSummary => n !== undefined);
-
-  type EdgeData = { arrowEnd?: boolean; label?: string };
-  const edgeContext: EdgeContext[] = edges.map((e) => {
-    const d = (e.data ?? {}) as EdgeData;
-    return {
-      id: e.id,
-      from: e.source,
-      fromContent: nodeMap.get(e.source)?.content ?? "",
-      to: e.target,
-      toContent: nodeMap.get(e.target)?.content ?? "",
-      hasArrow: d.arrowEnd ?? false,
-      label: d.label ?? "",
-    };
-  });
+  const globalNotes = nodes
+    .filter((n) => !claimedIds.has(n.id) && n.type !== "videoDrop")
+    .map((n) => nodeContent(n))
+    .filter(Boolean);
 
   return {
     exportedAt: new Date().toISOString(),
-    centralIdea,
-    hubs,
-    freeNodes,
-    edges: edgeContext,
+    project,
+    scenes,
+    globalNotes,
   };
 }
 
-// ── Export 3: Backend graph payload (sent under `graph` to /api/v1/summary) ──
-export function exportMindMapGraph(nodes: Node[], edges: Edge[]): MindMapGraph {
-  return buildMindMapGraph(nodes, edges);
+// ── Export 2: Backend payload (sent to /api/v1/summary) ─────────────────────
+export async function exportMindMapGraph(
+  nodes: Node[],
+  edges: Edge[],
+  scriptId?: string,
+): Promise<MindMapGraph> {
+  return buildMindMapGraph(nodes, edges, scriptId);
 }
 
-// ── Export 2: AI context (downloadable file, same shape) ────────────────────
-export function exportMindMapForAI(nodes: Node[], edges: Edge[]) {
+// ── Export 3: Downloadable AI context file ───────────────────────────────────
+export async function exportMindMapForAI(
+  nodes: Node[],
+  edges: Edge[],
+  scriptId?: string,
+) {
   downloadJSON(
     `mindmap-ai-${Date.now()}.json`,
-    buildMindMapGraph(nodes, edges),
+    await buildMindMapGraph(nodes, edges, scriptId),
   );
 }

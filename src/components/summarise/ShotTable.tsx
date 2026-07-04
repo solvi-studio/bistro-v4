@@ -7,20 +7,20 @@ interface Props {
 
 const COLUMNS = [
   "Shot Number",
-  "Storyboard",
+  "Time",
   "Description",
   "Shooting Style",
-  "Camera Angle",
+  "Audio",
   "Script",
 ];
 
 function Header() {
   return (
-    <div className="grid grid-cols-[80px_100px_1fr_120px_120px_1fr] gap-4 py-3 border-b border-gray-100 sticky top-0 bg-white z-10">
+    <div className="grid grid-cols-[80px_90px_1fr_140px_140px_1fr] gap-6 py-3 border-b border-gray-100 sticky top-0 bg-white z-10">
       {COLUMNS.map((col) => (
         <span
           key={col}
-          className="text-xs font-semibold text-gray-500 uppercase tracking-wide font-[var(--font-poppins)]"
+          className="text-sm font-semibold text-gray-700 font-(--font-poppins)"
         >
           {col}
         </span>
@@ -31,7 +31,7 @@ function Header() {
 
 export default function ShotTable({ shots }: Props) {
   return (
-    <div className="min-w-[900px]">
+    <div className="min-w-215">
       <Header />
       {shots.map((shot, i) => (
         <ShotTableRow

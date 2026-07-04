@@ -202,17 +202,14 @@ export function useKeyboardShortcuts(deps: ShortcutDeps) {
       unbinds.push(registerHotkey(pattern, "global", cb));
     }
 
+    // Active tool shortcuts (select, connector, eraser, video)
     reg("v", () => setActiveTool("select"));
-    reg("s", () => setActiveTool("sticky"));
-    reg("t", () => setActiveTool("textbox"));
-    reg("n", () => setActiveTool("shape"));
     reg("c", () => setActiveTool("connector"));
     reg("e", () => setActiveTool("eraser"));
     reg("b", () => setActiveTool("video"));
 
     const deleteSelected = () =>
       deleteElements({
-        // Anchor nodes are never removed, even when selected.
         nodes: getNodes().filter(
           (n) => n.selected && !ANCHOR_NODE_IDS.has(n.id),
         ),
@@ -224,7 +221,6 @@ export function useKeyboardShortcuts(deps: ShortcutDeps) {
 
     const selectAll = (e: KeyboardEvent) => {
       e.preventDefault();
-      // Skip anchors so a select-all + delete can't remove them.
       setNodes((ns) =>
         ns.map((n) => ({ ...n, selected: !ANCHOR_NODE_IDS.has(n.id) })),
       );

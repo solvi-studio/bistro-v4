@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { listIdeas } from "@/lib/db/actions/ideas";
 import type { CreativeScript } from "@/types/creative";
-import { getFolders, getScripts } from "@/utils/creative";
+import { getFolders } from "@/utils/creative";
 import CreateIdeaCard from "./CreateIdeaCard";
 import IdeaCard from "./IdeaCard";
 
@@ -13,8 +14,15 @@ export default function CreativeSpacesClient() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setScripts(getScripts());
-    setMounted(true);
+    listIdeas()
+      .then((ideas) => {
+        setScripts(ideas);
+        setMounted(true);
+      })
+      .catch((err) => {
+        console.error("Failed to load ideas:", err);
+        setMounted(true);
+      });
   }, []);
 
   function handleStartNewPage() {

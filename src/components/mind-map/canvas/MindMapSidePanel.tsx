@@ -1,139 +1,44 @@
 "use client";
 
 import { useReactFlow } from "@xyflow/react";
-import { GripVertical, Plus } from "lucide-react";
-import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { GripVertical } from "lucide-react";
 import {
-  leafNodeStyle,
   MIND_MAP_GROUPS,
   type MindMapGroup,
-  type TopicSection,
 } from "@/components/mind-map/constants/topics";
-import { EDGE_MARKER } from "@/components/mind-map/edges/edgeTypes";
-import { getScripts } from "@/utils/creative";
-import { pickHandles } from "@/utils/mind-map-handles";
-import { loadCustomItems, saveCustomItems } from "@/utils/mind-map-store";
-
-function truncate(text: string, max = 48): string {
-  const t = text.trim();
-  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
-}
+import {
+  spawnContentNode,
+  TOPIC_DND_MIME,
+  type TopicDragPayload,
+  VIDEO_DND_MIME,
+} from "@/components/mind-map/utils/spawnTopic";
 
 export default function MindMapSidePanel() {
-  const { addNodes, addEdges, getNode, getNodes } = useReactFlow();
-  const params = useSearchParams();
-  const scriptId = params.get("script");
-  const mapId = scriptId ?? "default";
-
-  // Big Picture topics come from the active script's compose answers.
-  const bigPictureSections = useMemo<TopicSection[]>(() => {
-    const script = scriptId
-      ? getScripts().find((s) => s.id === scriptId)
-      : null;
-    return [
-      {
-        label: "The core concept",
-        items: [script?.purpose?.trim() || "Your core concept"],
-        allowAdd: false,
-      },
-      {
-        label: "The Intro",
-        items: [script?.intro?.trim() || "Your intro idea"],
-        allowAdd: false,
-      },
-      {
-        label: "The Outro",
-        items: [script?.outro?.trim() || "Your outro idea"],
-        allowAdd: false,
-      },
-    ];
-  }, [scriptId]);
-
-  // Which section's "Add Your Own" input is open, and its draft value.
-  const [addingKey, setAddingKey] = useState<string | null>(null);
-  const [addValue, setAddValue] = useState("");
-  // User-added topics, kept in the panel as selectable chips (per section).
-  // They only land on the mind map when their chip is pressed. Persisted per
-  // map so the shortlist survives leaving and returning to the canvas.
-  // Init empty (matches SSR), then hydrate from storage after mount.
-  const [customItems, setCustomItems] = useState<Record<string, string[]>>({});
-  const restored = useRef(false);
-
-  useEffect(() => {
-    setCustomItems(loadCustomItems(mapId));
-    restored.current = true;
-  }, [mapId]);
-
-  // Persist the shortlist, debounced — gated until the saved value has loaded
-  // so the initial empty state never overwrites it.
-  useEffect(() => {
-    if (!restored.current) return;
-    const t = setTimeout(() => saveCustomItems(mapId, customItems), 300);
-    return () => clearTimeout(t);
-  }, [mapId, customItems]);
+  const { addNodes, getNodes } = useReactFlow();
 
   function spawnTopic(group: MindMapGroup, label: string) {
-    const text = label.trim();
-    if (!text) return;
-    const hub = getNode(group.hubId);
-    if (!hub) return;
-
-    const siblings = getNodes().filter((n) =>
-      n.id.startsWith(`topic-${group.hubId}-`),
-    );
-    const id = `topic-${group.hubId}-${Date.now()}`;
-    const position = {
-      x: hub.position.x + group.leafDir * 250,
-      y: hub.position.y + siblings.length * 64 - 40,
-    };
-
-    addNodes({
-      id,
-      type: "default",
-      position,
-      data: { label: truncate(text) },
-      style: leafNodeStyle(group.leafBg, group.leafText),
-    });
-    // Every spawned topic node is wired to its hub, attaching to the handles
-    // that face each other (chosen once, here at creation).
-    const { sourceHandle, targetHandle } = pickHandles(hub, {
-      position,
-      width: 210,
-      height: 40,
-    });
-    addEdges({
-      id: `e-${id}`,
-      source: group.hubId,
-      target: id,
-      sourceHandle,
-      targetHandle,
-      type: "labeled",
-      data: { arrowEnd: true },
-      markerEnd: EDGE_MARKER,
-    });
+    if (!group.category) return;
+    spawnContentNode({ addNodes, getNodes }, group.category, label);
   }
 
-  // Add the typed topic to the section's chip list — does NOT spawn a node.
-  function handleAddSubmit(sectionKey: string) {
-    const text = addValue.trim();
-    if (!text) return;
-    setCustomItems((prev) => ({
-      ...prev,
-      [sectionKey]: [...(prev[sectionKey] ?? []), text],
-    }));
-    setAddValue("");
-    setAddingKey(null);
+  function handleDragStart(
+    e: React.DragEvent,
+    group: MindMapGroup,
+    label: string,
+  ) {
+    if (!group.category) return;
+    const payload: TopicDragPayload = {
+      category: group.category,
+      header: label,
+    };
+    e.dataTransfer.setData(TOPIC_DND_MIME, JSON.stringify(payload));
+    e.dataTransfer.effectAllowed = "copy";
   }
 
   return (
-    // Chrome (scroll, padding, heading bar) is owned by CreativeHelperSidebar;
-    // this renders just the shortlist content nested in its tab content area.
     <div className="flex flex-col gap-6">
-      <h2 className="text-base font-bold text-gray-800">Your idea</h2>
-
-      {MIND_MAP_GROUPS.map((group) => {
-        const sections = group.fromScript ? bigPictureSections : group.sections;
+      {MIND_MAP_GROUPS.filter((group) => !group.fromScript).map((group) => {
+        const sections = group.sections;
 
         return (
           <div key={group.hubId} className="flex flex-col gap-3">
@@ -154,69 +59,57 @@ export default function MindMapSidePanel() {
                     </p>
                   )}
 
-                  {[...section.items, ...(customItems[sectionKey] ?? [])].map(
-                    (item) => (
-                      <button
-                        key={`${sectionKey}-${item}`}
-                        type="button"
-                        onClick={() => spawnTopic(group, item)}
-                        className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-transform hover:-translate-y-0.5"
-                        style={{
-                          backgroundColor: group.leafBg,
-                          color: group.leafText,
-                        }}
-                      >
-                        <GripVertical
-                          size={13}
-                          className="shrink-0 opacity-50"
-                        />
-                        <span className="line-clamp-2">{item}</span>
-                      </button>
-                    ),
-                  )}
-
-                  {section.allowAdd &&
-                    (addingKey === sectionKey ? (
-                      <div className="flex gap-1.5">
-                        <input
-                          // biome-ignore lint/a11y/noAutofocus: input appears on user click
-                          autoFocus
-                          value={addValue}
-                          onChange={(e) => setAddValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleAddSubmit(sectionKey);
-                            if (e.key === "Escape") setAddingKey(null);
-                          }}
-                          placeholder="Your own topic…"
-                          className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 outline-none focus:border-[var(--color-primary)]"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleAddSubmit(sectionKey)}
-                          className="shrink-0 rounded-xl bg-[var(--color-primary)] px-3 text-xs font-semibold text-white"
-                        >
-                          Add
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAddingKey(sectionKey);
-                          setAddValue("");
-                        }}
-                        className="flex items-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white px-3 py-2.5 text-left text-xs font-medium text-gray-400 transition-colors hover:border-gray-400 hover:text-gray-600"
-                      >
-                        <Plus size={13} className="shrink-0" />
-                        Add Your Own
-                      </button>
-                    ))}
+                  {section.items.map((item) => (
+                    <button
+                      key={`${sectionKey}-${item}`}
+                      type="button"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, group, item)}
+                      onClick={() => spawnTopic(group, item)}
+                      title="Click to add, or drag onto the canvas"
+                      className="flex cursor-grab items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-transform hover:-translate-y-0.5 active:cursor-grabbing"
+                      style={{
+                        backgroundColor: group.leafBg,
+                        color: group.leafText,
+                      }}
+                    >
+                      <GripVertical size={13} className="shrink-0 opacity-50" />
+                      <span className="line-clamp-2">{item}</span>
+                    </button>
+                  ))}
                 </div>
               );
             })}
           </div>
         );
       })}
+
+      {/* Video Analysis — draggable card that drops a VideoNode onto canvas */}
+      <div className="flex flex-col gap-3">
+        <h3 className="text-sm font-bold" style={{ color: "#0f766e" }}>
+          Video Analysis
+        </h3>
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: draggable card */}
+        <div
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.setData(VIDEO_DND_MIME, "1");
+            e.dataTransfer.effectAllowed = "copy";
+          }}
+          className="flex cursor-grab items-center gap-3 rounded-2xl px-4 py-5 transition-all hover:brightness-95 active:cursor-grabbing"
+          style={{ backgroundColor: "#e4f2eb" }}
+        >
+          <GripVertical
+            size={20}
+            className="shrink-0"
+            style={{ color: "#4caf87" }}
+          />
+          <p className="text-sm leading-relaxed" style={{ color: "#2e7d5a" }}>
+            Your inspiration videos, your past posts or whatever you want to
+            replicate in your next idea
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

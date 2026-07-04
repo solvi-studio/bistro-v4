@@ -1,17 +1,19 @@
 export interface ShotData {
   shotNumber: number;
-  storyboardUrl?: string;
+  time?: string;
   description: string;
   shootingStyle: string;
-  cameraAngle: string;
+  audio: string;
   script: string[];
 }
 
 export interface ConceptMeta {
-  concept: string;
-  tone: string;
-  targetAudience: string;
   projectName: string;
 }
 
 export type SummariseLoadState = "loading" | "ready" | "error";
+
+export interface SummariseResult {
+  meta: ConceptMeta;
+  shots: ShotData[];
+}

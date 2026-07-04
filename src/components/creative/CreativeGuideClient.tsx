@@ -72,7 +72,7 @@ export default function CreativeGuideClient() {
               type="button"
               onClick={handleBack}
               aria-label="Go back"
-              className={`min-h-[44px] rounded-full border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100 md:px-5 md:py-3 ${active === 0 ? "invisible" : ""}`}
+              className={`min-h-11 rounded-full border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100 md:px-5 md:py-3 ${active === 0 ? "invisible" : ""}`}
             >
               ← Back
             </button>
@@ -82,13 +82,21 @@ export default function CreativeGuideClient() {
             <button
               type="button"
               onClick={isLast ? handleFinish : handleNext}
-              className="min-h-[44px] rounded-full bg-[var(--color-primary)] px-7 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:bg-[var(--color-primary-hover)] md:py-3"
+              className="min-h-11 rounded-full bg-primary px-7 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:bg-(--color-primary-hover) md:py-3"
             >
               {isLast ? (isRewatch ? "Done" : "Get started") : "Continue"}
             </button>
           </div>
 
-          <div className="w-20 md:w-28" />
+          <div className="flex w-20 justify-end md:w-28">
+            <button
+              type="button"
+              onClick={handleFinish}
+              className="text-sm text-gray-400 underline-offset-2 transition-colors hover:text-gray-600 hover:underline"
+            >
+              Skip
+            </button>
+          </div>
         </div>
       </div>
     </div>

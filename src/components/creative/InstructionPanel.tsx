@@ -125,7 +125,7 @@ function MiniTable() {
         ))}
       </div>
       <div className="mt-3 flex justify-center">
-        <span className="rounded-full bg-[var(--color-primary)] px-4 py-1 text-[10px] font-semibold text-white">
+        <span className="rounded-full bg-primary px-4 py-1 text-[10px] font-semibold text-white">
           Confirm
         </span>
       </div>
@@ -272,7 +272,7 @@ export default function InstructionPanel({ active, direction, onToggleCollapse }
           {SLIDES.map((_, i) => (
             <span
               key={`dot-${i}`}
-              className={`h-2 w-2 rounded-full transition-colors ${i === active ? "bg-[var(--color-primary)]" : "bg-gray-300"}`}
+              className={`h-2 w-2 rounded-full transition-colors ${i === active ? "bg-primary" : "bg-gray-300"}`}
             />
           ))}
         </div>

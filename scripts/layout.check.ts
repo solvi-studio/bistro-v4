@@ -1,90 +1,105 @@
-// Standalone assertion script for distributeBesideHub.
+// Standalone assertion script for placement helpers.
 // Run: npx tsx scripts/layout.check.ts  (project has no test runner)
 
 import assert from "node:assert/strict";
-import { distributeBesideHub, type Rect } from "../src/utils/mind-map-layout";
-
-const hub = { position: { x: 1000, y: 300 }, width: 150, height: 44 };
-const LEAF_W = 210;
-const LEAF_H = 40;
-const GAP = 16;
-const OFFSET = 240;
-const opts = {
-  dir: 1 as const,
-  leafW: LEAF_W,
-  leafH: LEAF_H,
-  gap: GAP,
-  offsetX: OFFSET,
-};
+import {
+  distributeGrid,
+  findFreePosition,
+  placeNode,
+  type Rect,
+} from "../src/utils/mind-map-layout";
 
 function overlaps(a: Rect, b: Rect): boolean {
   return (
     a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
   );
 }
-const toRect = (p: { x: number; y: number }): Rect => ({
+
+const toRect = (p: { x: number; y: number }, w: number, h: number): Rect => ({
   x: p.x,
   y: p.y,
-  w: LEAF_W,
-  h: LEAF_H,
+  w,
+  h,
 });
 
-// even spacing, same column, centred on hub
+// ── findFreePosition ──────────────────────────────────────────────────────────
+
+// Returns base when there is nothing in the way.
 {
-  const ps = distributeBesideHub(hub, 3, [], opts);
-  assert.equal(ps.length, 3, "count 3");
-  assert.ok(
-    ps.every((p) => p.x === ps[0].x),
-    "all same x",
-  );
-  assert.equal(ps[0].x, 1000 + 150 + OFFSET, "x = hub right + offset");
-  assert.equal(ps[1].y - ps[0].y, LEAF_H + GAP, "even gap 0→1");
-  assert.equal(ps[2].y - ps[1].y, LEAF_H + GAP, "even gap 1→2");
-  const mid = (ps[0].y + ps[2].y + LEAF_H) / 2;
-  assert.ok(Math.abs(mid - (300 + 44 / 2)) < 1, "centred on hub centre");
+  const pos = findFreePosition([], 100, 200, 1, 200, 96);
+  assert.deepEqual(pos, { x: 100, y: 200 }, "free slot at base");
 }
 
-// no self-overlap across a larger batch
+// Nudges when base is occupied.
 {
-  const ps = distributeBesideHub(hub, 5, [], opts);
-  for (let i = 0; i < ps.length; i++) {
-    for (let j = i + 1; j < ps.length; j++) {
+  const occupied: Rect[] = [{ x: 100, y: 200, w: 200, h: 96 }];
+  const pos = findFreePosition(occupied, 100, 200, 1, 200, 96);
+  assert.ok(
+    !overlaps(toRect(pos, 200, 96), occupied[0]),
+    "nudged off occupied rect",
+  );
+}
+
+// ── placeNode ─────────────────────────────────────────────────────────────────
+
+// Registers itself into occupied so successive calls don't collide.
+{
+  const occupied: Rect[] = [];
+  const p1 = placeNode(occupied, 100, 200, 1, 200, 96);
+  const p2 = placeNode(occupied, 100, 200, 1, 200, 96);
+  assert.ok(
+    !overlaps(toRect(p1, 200, 96), toRect(p2, 200, 96)),
+    "two sequential placeNode calls don't overlap",
+  );
+  assert.equal(occupied.length, 2, "both rects registered");
+}
+
+// ── distributeGrid ─────────────────────────────────────────────────────────────
+
+// No overlaps in a 2-column 5-item grid.
+{
+  const positions = distributeGrid(0, 0, 5, [], {
+    cols: 2,
+    cellW: 260,
+    cellH: 175,
+    gap: 28,
+    dir: 1,
+  });
+  assert.equal(positions.length, 5, "5 positions returned");
+  for (let i = 0; i < positions.length; i++) {
+    for (let j = i + 1; j < positions.length; j++) {
       assert.ok(
-        !overlaps(toRect(ps[i]), toRect(ps[j])),
+        !overlaps(
+          toRect(positions[i], 260, 175),
+          toRect(positions[j], 260, 175),
+        ),
         `no overlap ${i}/${j}`,
       );
     }
   }
 }
 
-// collision with an existing node nudges the slot
+// Collision with a pre-existing node nudges the first slot.
 {
-  const occupied: Rect[] = [
-    {
-      x: 1000 + 150 + OFFSET,
-      y: 300 + 22 - (3 * 40 + 2 * 16) / 2,
-      w: 210,
-      h: 40,
-    },
-  ];
-  const ps = distributeBesideHub(hub, 3, occupied, opts);
-  for (const p of ps) {
-    assert.ok(!overlaps(toRect(p), occupied[0]), "nudged off occupied");
+  const blocker: Rect = { x: 0, y: 0, w: 260, h: 175 };
+  const positions = distributeGrid(0, 0, 2, [blocker], {
+    cols: 2,
+    cellW: 260,
+    cellH: 175,
+    gap: 28,
+    dir: 1,
+  });
+  for (const p of positions) {
+    assert.ok(
+      !overlaps(toRect(p, 260, 175), blocker),
+      "grid slots don't land on pre-existing blocker",
+    );
   }
 }
 
-// left side
+// Empty input.
 {
-  const ps = distributeBesideHub(hub, 2, [], { ...opts, dir: -1 });
-  assert.ok(
-    ps.every((p) => p.x < hub.position.x),
-    "left of hub",
-  );
-}
-
-// empty
-{
-  assert.deepEqual(distributeBesideHub(hub, 0, [], opts), [], "count 0");
+  assert.deepEqual(distributeGrid(0, 0, 0, [], {}), [], "count 0 → []");
 }
 
 console.log("layout: all assertions passed");

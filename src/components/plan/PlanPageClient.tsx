@@ -1,49 +1,102 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toISO } from "@/components/calendar/dateUtils";
+import {
+  getPlanTasks as dbGetPlanTasks,
+  savePlanTasks as dbSavePlanTasks,
+} from "@/lib/db/actions/plan";
 import type { CalendarEvent, PlanTask } from "@/types/plan";
 import { loadEvents } from "@/utils/calendar";
+import { subscribeDataChange } from "@/utils/dataSync";
 import {
-  getDefaultPlanTasks,
-  getPlanTasks,
-  getSummariseData,
-  savePlanTasks,
-} from "@/utils/plan";
-import EventDetailCard from "./EventDetailCard";
+  buildPlanSummary,
+  buildScheduleText,
+  generatePlanTasks,
+} from "@/utils/plan-service";
+import { getSummaryResult } from "@/utils/summarise-service";
+import DayScheduleCard from "./DayScheduleCard";
 import ExecutionCalendar from "./ExecutionCalendar";
 import PlanBoard from "./PlanBoard";
 
 export default function PlanPageClient() {
   const params = useSearchParams();
-  // The plan page is scoped to one folder (idea). Its calendar reads that
-  // script's events from the shared per-script store (also feeds /calendar).
   const scriptId = params.get("script") ?? "default";
 
   const [tasks, setTasks] = useState<PlanTask[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [projectName, setProjectName] = useState("Your Idea");
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(() =>
+    toISO(new Date()),
+  );
   const [mounted, setMounted] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
 
   useEffect(() => {
-    setTasks(getPlanTasks(scriptId));
-    setEvents(loadEvents(scriptId));
-    setProjectName(getSummariseData().meta.projectName);
-    setMounted(true);
+    let cancelled = false;
+    const currentEvents = loadEvents(scriptId);
+    setEvents(currentEvents);
+
+    dbGetPlanTasks(scriptId)
+      .then(async (loaded) => {
+        if (cancelled) return;
+        setTasks(loaded);
+        setMounted(true);
+
+        // Auto-generate plan when board is empty and a summary exists.
+        if (loaded.length === 0) {
+          const summary = await getSummaryResult(scriptId);
+          if (cancelled || !summary) return;
+
+          setIsGenerating(true);
+          try {
+            const generated = await generatePlanTasks({
+              summary: buildPlanSummary(summary),
+              schedule: buildScheduleText(currentEvents),
+            });
+            if (cancelled) return;
+            setTasks(generated);
+            dbSavePlanTasks(scriptId, generated).catch(console.error);
+          } catch (err) {
+            if (!cancelled) {
+              setGenError(
+                err instanceof Error
+                  ? err.message
+                  : "Failed to generate the plan.",
+              );
+            }
+          } finally {
+            if (!cancelled) setIsGenerating(false);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load plan tasks:", err);
+        if (!cancelled) setMounted(true);
+      });
+
+    getSummaryResult(scriptId)
+      .then((r) => setProjectName(r?.meta.projectName ?? "Your Idea"))
+      .catch(console.error);
+
+    const unsubscribe = subscribeDataChange(() => {
+      setEvents(loadEvents(scriptId));
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [scriptId]);
 
   function handleTasksUpdate(updated: PlanTask[]) {
     setTasks(updated);
-    savePlanTasks(scriptId, updated);
+    dbSavePlanTasks(scriptId, updated).catch(console.error);
   }
 
-  // Project button → generate the default task template once, only while the
-  // board is empty (so repeated clicks don't duplicate the tasks).
-  function generateDefaults() {
-    if (tasks.length > 0) return;
-    handleTasksUpdate(getDefaultPlanTasks());
+  function handleTaskTextUpdate(taskId: string, text: string) {
+    handleTasksUpdate(tasks.map((t) => (t.id === taskId ? { ...t, text } : t)));
   }
 
   function handleDateSelect(date: string) {
@@ -54,13 +107,10 @@ export default function PlanPageClient() {
     ? (events.find((e) => e.date === selectedDate) ?? null)
     : null;
 
-  // Tasks scheduled on the selected day — surfaced in the detail card so the
-  // dot on the calendar actually shows what's due.
   const selectedTasks = selectedDate
     ? tasks.filter((t) => t.scheduledDate === selectedDate)
     : [];
 
-  // Derive calendar markers from both stored events and task scheduled dates
   const markedDates = [
     ...events.map((e) => e.date),
     ...tasks.flatMap((t) => (t.scheduledDate ? [t.scheduledDate] : [])),
@@ -78,49 +128,48 @@ export default function PlanPageClient() {
 
   return (
     <div
-      className="flex flex-col h-full font-[var(--font-poppins)] overflow-hidden"
-      style={{ background: "#FAFAFB" }}
+      className="flex flex-col h-full font-(--font-poppins) overflow-hidden"
+      style={{
+        background: "#FAFAFB",
+        fontFamily: "var(--font-poppins), Poppins, sans-serif",
+      }}
     >
       {/* Header */}
       <div className="px-8 pt-7 pb-4 shrink-0">
-        <div className="flex gap-3 flex flex-row items-start gap-5">
-          <h1 className="text-2xl font-[var(--font-display)] text-gray-800">
-            Plan your idea
+        <div className="flex flex-col items-start">
+          <h1
+            className="text-2xl font-(--font-poppins) text-gray-800"
+            style={{ fontWeight: 500 }}
+          >
+            Plan your ideas
           </h1>
-
-          <h2 className="mt-3 text-sm text-gray-500">
-            Here&rsquo;s the list of what you need to prepare
+          <h2 className="mt-3 text-sm font-medium text-gray-800">
+            {isGenerating
+              ? "Generating your plan…"
+              : projectName !== "Your Idea"
+                ? projectName
+                : "Here’s the list of what you need to prepare"}
           </h2>
         </div>
-
-        <button
-          type="button"
-          onClick={generateDefaults}
-          disabled={tasks.length > 0}
-          title={
-            tasks.length > 0
-              ? "Default tasks already added"
-              : "Generate the default task list"
-          }
-          className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary)] px-3.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)] disabled:cursor-default disabled:opacity-60 disabled:hover:bg-[var(--color-primary)]"
-        >
-          <Sparkles size={14} />
-          {projectName}
-        </button>
+        {genError && <p className="mt-2 text-xs text-red-500">{genError}</p>}
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col gap-4 px-8 pb-8 overflow-hidden">
-        {/* Phase board: Pre / Production / Post columns */}
+        {/* Phase board */}
         <div className="flex-1 min-h-0">
-          <PlanBoard tasks={tasks} onUpdate={handleTasksUpdate} />
+          <PlanBoard
+            tasks={tasks}
+            onUpdate={handleTasksUpdate}
+            isLoading={isGenerating}
+          />
         </div>
 
         {/* Calendar card */}
-        <div className="shrink-0 rounded-2xl bg-white shadow-sm p-6">
+        <div className="shrink-0 rounded-2xl bg-white shadow-sm p-6 ">
           <h3 className="text-sm font-semibold text-gray-700 mb-4">
             Execution Calendar
           </h3>
-          <div className="flex gap-4 items-start">
+          <div className="flex gap-4 items-start h-[40vh] overflow-hidden">
             <div className="flex-1 min-w-0">
               <ExecutionCalendar
                 markedDates={markedDates}
@@ -128,10 +177,11 @@ export default function PlanPageClient() {
                 onSelectDate={handleDateSelect}
               />
             </div>
-            <EventDetailCard
+            <DayScheduleCard
               event={selectedEvent}
               tasks={selectedTasks}
               date={selectedDate}
+              onUpdateTaskText={handleTaskTextUpdate}
             />
           </div>
         </div>

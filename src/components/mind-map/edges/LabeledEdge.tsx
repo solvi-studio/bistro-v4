@@ -9,10 +9,12 @@ import {
   getSmoothStepPath,
   getStraightPath,
   MarkerType,
-  type Position,
+  Position,
+  useInternalNode,
   useReactFlow,
 } from "@xyflow/react";
-import { ArrowLeft, ArrowRight, Trash2, Type } from "lucide-react";
+import { pickHandles, type HandleSide } from "@/utils/mind-map-handles";
+import { Trash2, Type } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -35,6 +37,48 @@ export const EDGE_MARKER = {
   height: 16,
   color: "#9ca3af",
 };
+
+// ─── Dynamic handle coords ───────────────────────────────────────────────────
+
+function sideToCoords(
+  absPos: { x: number; y: number },
+  w: number,
+  h: number,
+  side: HandleSide,
+): { x: number; y: number; position: Position } {
+  switch (side) {
+    case "top":    return { x: absPos.x + w / 2, y: absPos.y,         position: Position.Top };
+    case "bottom": return { x: absPos.x + w / 2, y: absPos.y + h,     position: Position.Bottom };
+    case "left":   return { x: absPos.x,          y: absPos.y + h / 2, position: Position.Left };
+    case "right":  return { x: absPos.x + w,      y: absPos.y + h / 2, position: Position.Right };
+  }
+}
+
+// ─── Node box size ────────────────────────────────────────────────────────────
+// Mirrors mind-map-layout.ts's nodeSize(): prefer RF's measured size, then
+// explicit node-level width/height, then data.width/minHeight (what a manual
+// resize writes immediately — measured can lag behind it by a frame or more
+// via React Flow's async ResizeObserver), then fall back to a default.
+function nodeBoxSize(node: {
+  measured?: { width?: number; height?: number };
+  width?: number | null;
+  height?: number | null;
+  data?: unknown;
+}): { w: number; h: number } {
+  const data = (node.data ?? {}) as Record<string, unknown>;
+  return {
+    w:
+      node.measured?.width ??
+      node.width ??
+      (typeof data.width === "number" ? data.width : undefined) ??
+      150,
+    h:
+      node.measured?.height ??
+      node.height ??
+      (typeof data.minHeight === "number" ? data.minHeight : undefined) ??
+      50,
+  };
+}
 
 // ─── Path helper ──────────────────────────────────────────────────────────────
 
@@ -64,6 +108,8 @@ const EDGE_STYLE_LABELS: Record<EdgeStyleType, string> = {
 
 export default function LabeledEdge({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   sourcePosition,
@@ -75,56 +121,46 @@ export default function LabeledEdge({
   markerEnd,
   data,
 }: EdgeProps<LabeledEdgeType>) {
-  const { updateEdgeData, setEdges, deleteElements } = useReactFlow();
+  const { updateEdgeData, deleteElements } = useReactFlow();
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const edgeType: EdgeStyleType = data?.edgeType ?? "smoothstep";
   const label = data?.label ?? "";
-  const arrowStart = data?.arrowStart ?? false;
-  const arrowEnd = data?.arrowEnd ?? true;
 
-  // Coordinates come from the connected handles (chosen once at creation via
-  // pickHandles) — ReactFlow feeds sourceX/Y/Position + targetX/Y/Position.
+  // Re-pick handles dynamically from current node positions so the edge always
+  // exits/enters the closest side regardless of which handle was stored at creation.
+  const srcNode = useInternalNode(source);
+  const tgtNode = useInternalNode(target);
+
+  let sX = sourceX, sY = sourceY, sPos = sourcePosition;
+  let tX = targetX, tY = targetY, tPos = targetPosition;
+
+  if (srcNode && tgtNode) {
+    const srcAbs = srcNode.internals.positionAbsolute;
+    const tgtAbs = tgtNode.internals.positionAbsolute;
+    const { w: srcW, h: srcH } = nodeBoxSize(srcNode);
+    const { w: tgtW, h: tgtH } = nodeBoxSize(tgtNode);
+
+    const { sourceHandle, targetHandle } = pickHandles(
+      { position: srcAbs, measured: { width: srcW, height: srcH } },
+      { position: tgtAbs, measured: { width: tgtW, height: tgtH } },
+    );
+
+    const s = sideToCoords(srcAbs, srcW, srcH, sourceHandle);
+    const t = sideToCoords(tgtAbs, tgtW, tgtH, targetHandle);
+    sX = s.x; sY = s.y; sPos = s.position;
+    tX = t.x; tY = t.y; tPos = t.position;
+  }
+
   const [edgePath, labelX, labelY] = getEdgePath(edgeType, {
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
+    sourceX: sX,
+    sourceY: sY,
+    sourcePosition: sPos,
+    targetX: tX,
+    targetY: tY,
+    targetPosition: tPos,
   });
-
-  const toggleArrow = useCallback(
-    (side: "start" | "end") => {
-      const isStart = side === "start";
-      const current = isStart ? arrowStart : arrowEnd;
-      const next = !current;
-      setEdges((eds) =>
-        eds.map((e) => {
-          if (e.id !== id) return e;
-          return {
-            ...e,
-            markerStart: isStart
-              ? next
-                ? EDGE_MARKER
-                : undefined
-              : e.markerStart,
-            markerEnd: !isStart
-              ? next
-                ? EDGE_MARKER
-                : undefined
-              : e.markerEnd,
-            data: {
-              ...e.data,
-              [isStart ? "arrowStart" : "arrowEnd"]: next,
-            },
-          };
-        }),
-      );
-    },
-    [id, arrowStart, arrowEnd, setEdges],
-  );
 
   const startEditing = useCallback(() => {
     setIsEditing(true);
@@ -185,37 +221,6 @@ export default function LabeledEdge({
 
               <div className="w-px h-4 bg-gray-200 mx-0.5 shrink-0" />
 
-              {/* Arrow toggles */}
-              <button
-                type="button"
-                title="Arrow at start (from)"
-                onClick={() => toggleArrow("start")}
-                className={[
-                  "h-6 w-6 flex items-center justify-center rounded-md transition-colors",
-                  arrowStart
-                    ? "bg-gray-100 text-gray-900"
-                    : "text-gray-400 hover:bg-gray-50 hover:text-gray-700",
-                ].join(" ")}
-              >
-                <ArrowLeft size={12} />
-              </button>
-
-              <button
-                type="button"
-                title="Arrow at end (to)"
-                onClick={() => toggleArrow("end")}
-                className={[
-                  "h-6 w-6 flex items-center justify-center rounded-md transition-colors",
-                  arrowEnd
-                    ? "bg-gray-100 text-gray-900"
-                    : "text-gray-400 hover:bg-gray-50 hover:text-gray-700",
-                ].join(" ")}
-              >
-                <ArrowRight size={12} />
-              </button>
-
-              <div className="w-px h-4 bg-gray-200 mx-0.5 shrink-0" />
-
               {/* Label edit */}
               <button
                 type="button"
@@ -251,7 +256,7 @@ export default function LabeledEdge({
                 if (e.key === "Escape") setIsEditing(false);
                 e.stopPropagation();
               }}
-              className="text-gray-600 text-xs bg-white border border-gray-300 rounded-lg px-2 py-0.5 shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 min-w-[60px]"
+              className="text-gray-600 text-xs bg-white border border-gray-300 rounded-lg px-2 py-0.5 shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 min-w-15"
             />
           ) : label ? (
             // biome-ignore lint/a11y/noStaticElementInteractions: edge label double-click to edit

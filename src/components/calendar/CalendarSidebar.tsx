@@ -1,76 +1,84 @@
 "use client";
 
-import { Calendar, Plus } from "lucide-react";
-import type { CreativeScript } from "@/types/creative";
-import { colorFor } from "@/utils/calendar";
+import { ChevronsLeft, Plus } from "lucide-react";
+import type { PlanPhase } from "@/types/plan";
 import MiniMonth from "./MiniMonth";
 
+const PHASES: { phase: PlanPhase; label: string; chip: string }[] = [
+  {
+    phase: "pre",
+    label: "Pre-Production",
+    chip: "bg-[#FF9699] text-gray-900 border border-[#FF9699]",
+  },
+  {
+    phase: "production",
+    label: "Production Day",
+    chip: "bg-[#73B7FF] text-gray-900 border border-[#73B7FF]",
+  },
+  {
+    phase: "post",
+    label: "Post-Production",
+    chip: "bg-[#FBBF24] text-gray-900 border border-[#FBBF24]",
+  },
+];
+
 interface Props {
-  scripts: CreativeScript[];
-  activeScriptIds: Set<string>;
-  onToggleScript: (id: string) => void;
+  activePhases: Set<PlanPhase>;
+  onTogglePhase: (p: PlanPhase) => void;
   selectedISO: string;
   onSelectDate: (iso: string) => void;
   onCreate: () => void;
+  onCollapse: () => void;
 }
 
 export default function CalendarSidebar({
-  scripts,
-  activeScriptIds,
-  onToggleScript,
+  activePhases,
+  onTogglePhase,
   selectedISO,
   onSelectDate,
   onCreate,
+  onCollapse,
 }: Props) {
   return (
-    <aside className="flex w-[240px] shrink-0 flex-col gap-5 overflow-y-auto p-4">
-      <button
-        type="button"
-        onClick={onCreate}
-        className="flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)]"
-      >
-        Create <Plus size={15} />
-      </button>
+    <aside className="flex w-60 shrink-0 flex-col gap-5 overflow-y-auto p-4">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onCreate}
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-(--color-primary-hover)"
+        >
+          Create <Plus size={15} />
+        </button>
+        <button
+          type="button"
+          onClick={onCollapse}
+          aria-label="Collapse sidebar"
+          className="grid h-8 w-8 place-items-center rounded-lg text-gray-400 hover:bg-gray-100"
+        >
+          <ChevronsLeft size={16} />
+        </button>
+      </div>
 
       <MiniMonth selectedISO={selectedISO} onSelect={onSelectDate} />
 
       <div>
-        <h3 className="mb-2 text-xs font-semibold text-gray-500">
-          Calendar Sync
-        </h3>
-        <button
-          type="button"
-          disabled
-          title="Coming soon"
-          className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-600 opacity-70"
-        >
-          <Calendar size={13} />
-          Google Calendar
-        </button>
-      </div>
-
-      <div>
         <h3 className="mb-2 text-xs font-semibold text-gray-500">Filter</h3>
         <div className="flex flex-col gap-2">
-          {scripts.map((s) => {
-            const active = activeScriptIds.has(s.id);
-            const c = colorFor(s.colorTag);
+          {PHASES.map(({ phase, label, chip }) => {
+            const active = activePhases.has(phase);
             return (
               <button
-                key={s.id}
+                key={phase}
                 type="button"
-                onClick={() => onToggleScript(s.id)}
-                className={`rounded-lg px-3 py-2 text-left text-xs font-medium transition-opacity ${c.chip} ${
+                onClick={() => onTogglePhase(phase)}
+                className={`w-full rounded-lg px-3 py-2.5 text-left text-xs font-medium transition-opacity ${chip} ${
                   active ? "" : "opacity-40"
                 }`}
               >
-                {s.title}
+                {label}
               </button>
             );
           })}
-          {scripts.length === 0 && (
-            <p className="text-xs text-gray-400">No folders yet.</p>
-          )}
         </div>
       </div>
     </aside>

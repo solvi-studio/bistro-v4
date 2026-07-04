@@ -1,13 +1,19 @@
-import type {
-  CreativeFolder,
-  CreativeScript,
-  ScriptColor,
-} from "@/types/creative";
+import type { CreativeFolder, Platform } from "@/types/creative";
 import { storage } from "@/utils/storage";
+
+// Platforms offered in the create-project modal, with display labels.
+export const PLATFORMS: { id: Platform; label: string }[] = [
+  { id: "tiktok", label: "TikTok" },
+  { id: "youtube", label: "YouTube" },
+  { id: "instagram", label: "Instagram" },
+];
+
+export function platformLabel(platform: Platform | undefined): string {
+  return PLATFORMS.find((p) => p.id === platform)?.label ?? "";
+}
 
 const KEYS = {
   folders: "bistro_creative_folders",
-  scripts: "bistro_creative_scripts",
   guideSeen: "bistro_creative_guide_seen",
   draft: "bistro_creative_draft_",
 } as const;
@@ -16,13 +22,6 @@ const SEED_FOLDERS: CreativeFolder[] = [
   { id: "f-default", name: "My Scripts", scriptIds: [] },
 ];
 
-const SEED_SCRIPTS: CreativeScript[] = [];
-
-// Colours cycle through new scripts so the card grid stays varied.
-const COLOR_CYCLE: ScriptColor[] = ["blue", "yellow", "pink"];
-
-// Routed through the shared storage seam so swapping local→DB happens in one
-// place (see utils/storage.ts).
 const safeGet = <T>(key: string, seed: T): T => storage.read(key, seed);
 const safeSet = <T>(key: string, value: T): void => storage.write(key, value);
 const safeRemove = (key: string): void => storage.remove(key);
@@ -35,22 +34,16 @@ export function saveFolders(folders: CreativeFolder[]): void {
   safeSet(KEYS.folders, folders);
 }
 
-export function getScripts(): CreativeScript[] {
-  return safeGet(KEYS.scripts, SEED_SCRIPTS);
-}
-
-export function saveScripts(scripts: CreativeScript[]): void {
-  safeSet(KEYS.scripts, scripts);
-}
-
 export interface ScriptDraft {
-  purpose: string;
-  intro: string;
-  outro: string;
+  name: string;
+  goal: string;
+  platform: Platform | "";
 }
 
-// ── Craft-script draft persistence (per folder) ────────────────────────────
-// Keeps the in-progress answers so navigating away and back restores them.
+export const EMPTY_DRAFT: ScriptDraft = { name: "", goal: "", platform: "" };
+
+// ── Create-project draft persistence (per folder) ──────────────────────────
+// Keeps the in-progress modal answers so closing and reopening restores them.
 // Cleared on submit, when the draft becomes a real script.
 
 export function getDraft(folderId: string): ScriptDraft | null {
@@ -63,50 +56,6 @@ export function saveDraft(folderId: string, draft: ScriptDraft): void {
 
 export function clearDraft(folderId: string): void {
   safeRemove(`${KEYS.draft}${folderId}`);
-}
-
-/**
- * Create a new script from the compose-page answers, link it to its folder,
- * and persist both. Called only on submit — never on unmount.
- */
-export function addScript(
-  folderId: string,
-  draft: ScriptDraft,
-): CreativeScript {
-  const folders = getFolders();
-  const targetId = folders.some((f) => f.id === folderId)
-    ? folderId
-    : (folders[0]?.id ?? "f-default");
-
-  const existing = getScripts();
-  const firstLine = draft.purpose.trim().split("\n")[0]?.trim() ?? "";
-  const title =
-    firstLine.length > 0 ? firstLine.slice(0, 48) : "Untitled shotlist";
-
-  const script: CreativeScript = {
-    id: `s-${Date.now()}`,
-    title,
-    body: [draft.purpose, draft.intro, draft.outro]
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .join("\n\n"),
-    folderId: targetId,
-    createdAt: new Date().toISOString(),
-    emoji: "✨",
-    colorTag: COLOR_CYCLE[existing.length % COLOR_CYCLE.length],
-    purpose: draft.purpose.trim(),
-    intro: draft.intro.trim(),
-    outro: draft.outro.trim(),
-  };
-
-  saveScripts([...existing, script]);
-  saveFolders(
-    folders.map((f) =>
-      f.id === targetId ? { ...f, scriptIds: [...f.scriptIds, script.id] } : f,
-    ),
-  );
-
-  return script;
 }
 
 export function isGuideSeen(): boolean {

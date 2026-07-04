@@ -168,7 +168,7 @@ export default function ExecutionCalendar({
             <ChevronLeft size={14} className="text-gray-500" />
           </button>
 
-          <span className="text-xs font-semibold text-gray-700 min-w-[110px] text-center tabular-nums">
+          <span className="text-xs font-semibold text-gray-700 min-w-27.5 text-center tabular-nums">
             {view === "monthly"
               ? `${MONTHS[monthCursor.month]} ${monthCursor.year}`
               : formatWeekRange(weekCursor)}
@@ -214,7 +214,7 @@ export default function ExecutionCalendar({
                 onClick={() => onSelectDate(iso)}
                 className={`relative flex flex-col items-center justify-center h-8 w-full rounded-full text-xs font-medium transition-colors ${
                   isSelected
-                    ? "bg-[var(--color-primary)] text-white"
+                    ? "bg-primary text-white"
                     : isToday
                       ? "bg-blue-100 text-blue-700"
                       : "text-gray-600 hover:bg-gray-100"
@@ -222,7 +222,7 @@ export default function ExecutionCalendar({
               >
                 {day}
                 {hasEvent && !isSelected && (
-                  <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-[var(--color-primary)]" />
+                  <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-primary" />
                 )}
               </button>
             );
@@ -244,7 +244,7 @@ export default function ExecutionCalendar({
                 onClick={() => onSelectDate(iso)}
                 className={`relative flex flex-col items-center justify-center h-16 rounded-xl text-xs font-medium transition-colors ${
                   isSelected
-                    ? "bg-[var(--color-primary)] text-white"
+                    ? "bg-primary text-white"
                     : isToday
                       ? "bg-blue-100 text-blue-700"
                       : "text-gray-600 hover:bg-gray-100"
@@ -255,7 +255,7 @@ export default function ExecutionCalendar({
                 </span>
                 <span>{d.getDate()}</span>
                 {hasEvent && !isSelected && (
-                  <span className="absolute bottom-2 w-1 h-1 rounded-full bg-[var(--color-primary)]" />
+                  <span className="absolute bottom-2 w-1 h-1 rounded-full bg-primary" />
                 )}
               </button>
             );

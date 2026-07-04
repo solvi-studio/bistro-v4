@@ -1,10 +1,13 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
-import CreativeComposeClient from "@/components/creative/CreativeComposeClient";
+import CreateProjectModal from "@/components/creative/CreateProjectModal";
+
+export const metadata: Metadata = { title: "New Space" };
 
 export default function CreativeNewPage() {
   return (
     <Suspense fallback={null}>
-      <CreativeComposeClient />
+      <CreateProjectModal />
     </Suspense>
   );
 }

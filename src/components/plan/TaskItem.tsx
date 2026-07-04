@@ -2,6 +2,7 @@
 
 import { CalendarIcon, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { PlanTask } from "@/types/plan";
 
 interface Props {
@@ -22,9 +23,18 @@ const COLOR_MAP: Record<PlanTask["colorTag"], string> = {
 };
 
 function formatDate(iso: string): string {
-  const [year, month, day] = iso.split("-");
-  return `${day}/${month}/${year}`;
+  const [, month, day] = iso.split("-");
+  return `${day}/${month}`;
 }
+
+function formatTime(hhmm: string): string {
+  const [hStr, mStr] = hhmm.split(":");
+  const h = parseInt(hStr, 10);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return `${hour}:${mStr} ${period}`;
+}
+
 
 export default function TaskItem({
   task,
@@ -34,18 +44,33 @@ export default function TaskItem({
   accentCls,
 }: Props) {
   const [showPicker, setShowPicker] = useState(false);
+  const [pickerTab, setPickerTab] = useState<"date" | "time">("date");
+  const [pickerPos, setPickerPos] = useState({ top: 0, left: 0 });
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.text);
   const inputRef = useRef<HTMLInputElement>(null);
+  const calBtnRef = useRef<HTMLButtonElement>(null);
 
   function handleCalendarClick() {
+    const rect = calBtnRef.current?.getBoundingClientRect();
+    if (rect) {
+      setPickerPos({ top: rect.bottom + 6, left: rect.right - 224 });
+    }
     setShowPicker((v) => !v);
+    setPickerTab("date");
     setTimeout(() => inputRef.current?.showPicker?.(), 50);
   }
 
   function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
     onUpdate({ ...task, scheduledDate: e.target.value });
-    setShowPicker(false);
+  }
+
+  function handleStartTimeChange(e: React.ChangeEvent<HTMLInputElement>) {
+    onUpdate({ ...task, scheduledStartTime: e.target.value || undefined });
+  }
+
+  function handleEndTimeChange(e: React.ChangeEvent<HTMLInputElement>) {
+    onUpdate({ ...task, scheduledEndTime: e.target.value || undefined });
   }
 
   function startEdit() {
@@ -59,71 +84,139 @@ export default function TaskItem({
     setEditing(false);
   }
 
-  const picker = showPicker && (
-    <div className="absolute right-0 top-9 z-20 bg-white rounded-2xl shadow-lg border border-gray-100 p-3">
-      <p className="text-xs text-gray-400 mb-2">Which day to add?</p>
-      <input
-        ref={inputRef}
-        type="date"
-        defaultValue={task.scheduledDate ?? ""}
-        onChange={handleDateChange}
-        className="text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-      />
+  const inputCls =
+    "w-full text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]";
+
+  const pickerContent = (
+    <div
+      style={{ top: pickerPos.top, left: pickerPos.left }}
+      className="fixed z-[9999] bg-white rounded-2xl shadow-lg border border-gray-100 p-3 w-56"
+    >
+      {/* Tabs */}
+      <div className="flex gap-1 mb-3 rounded-lg bg-gray-100 p-0.5">
+        {(["date", "time"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setPickerTab(tab)}
+            className={`flex-1 rounded-md py-1 text-xs font-semibold transition-colors capitalize ${
+              pickerTab === tab
+                ? "bg-white text-gray-800 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {pickerTab === "date" ? (
+        <>
+          <p className="text-xs text-gray-400 mb-2">Which day?</p>
+          <input
+            ref={inputRef}
+            type="date"
+            defaultValue={task.scheduledDate ?? ""}
+            onChange={handleDateChange}
+            className={inputCls}
+          />
+        </>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <div>
+            <p className="text-xs text-gray-400 mb-1">Start time</p>
+            <input
+              type="time"
+              value={task.scheduledStartTime ?? ""}
+              onChange={handleStartTimeChange}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <p className="text-xs text-gray-400 mb-1">End time</p>
+            <input
+              type="time"
+              value={task.scheduledEndTime ?? ""}
+              onChange={handleEndTimeChange}
+              className={inputCls}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
+
+  const picker =
+    showPicker && typeof document !== "undefined"
+      ? createPortal(pickerContent, document.body)
+      : null;
 
   // ── Board card: white card with the text and a calendar trigger inside ──
   if (variant === "card") {
     return (
       <div className="group relative">
-        <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-3.5 py-2.5 shadow-sm">
-          {editing ? (
-            <input
-              // biome-ignore lint/a11y/noAutofocus: focus follows the user's click to edit
-              autoFocus
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commitEdit}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") commitEdit();
-                if (e.key === "Escape") setEditing(false);
-              }}
-              className={`min-w-0 flex-1 bg-transparent text-[13px] font-medium outline-none ${accentCls ?? "text-gray-700"}`}
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={startEdit}
-              title="Click to edit"
-              className={`min-w-0 flex-1 truncate text-left text-[13px] font-medium ${accentCls ?? "text-gray-700"}`}
-            >
-              {task.text}
-            </button>
-          )}
+        <div className="flex items-start gap-2 rounded-xl border border-gray-100 bg-white px-3.5 py-2.5 shadow-sm">
+          {/* Text — its own div, independent of the button/date column's width. */}
+          <div className="min-w-0 flex-1">
+            {editing ? (
+              <textarea
+                // biome-ignore lint/a11y/noAutofocus: focus follows the user's click to edit
+                autoFocus
+                rows={2}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={commitEdit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    commitEdit();
+                  }
+                  if (e.key === "Escape") setEditing(false);
+                }}
+                className={`w-full resize-none bg-transparent text-[13px] font-light leading-snug outline-none ${accentCls ?? "text-gray-700"}`}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={startEdit}
+                title="Click to edit"
+                className={`line-clamp-2 w-full text-left text-[13px] font-light ${accentCls ?? "text-gray-700"}`}
+              >
+                {task.text}
+              </button>
+            )}
+          </div>
 
-          {task.scheduledDate && (
-            <span className="shrink-0 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
-              {formatDate(task.scheduledDate)}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={handleCalendarClick}
-            aria-label={task.scheduledDate ? "Change date" : "Add date"}
-            className="shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100"
-          >
-            <CalendarIcon size={15} />
-          </button>
-          {onDelete && (
-            <button
-              type="button"
-              onClick={() => onDelete(task.id)}
-              aria-label="Delete task"
-              className="shrink-0 rounded-md p-1 text-gray-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
-            >
-              <Trash2 size={15} />
-            </button>
-          )}
+          {/* Buttons + date — grouped together on the right, date below the buttons. */}
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <div className="flex items-center gap-1">
+              <button
+                ref={calBtnRef}
+                type="button"
+                onClick={handleCalendarClick}
+                aria-label={task.scheduledDate ? "Change date" : "Add date"}
+                className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100"
+              >
+                <CalendarIcon size={15} />
+              </button>
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(task.id)}
+                  aria-label="Delete task"
+                  className="rounded-md p-1 text-gray-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
+                >
+                  <Trash2 size={15} />
+                </button>
+              )}
+            </div>
+
+            {task.scheduledDate && (
+              <span className="w-fit rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
+                {formatDate(task.scheduledDate)}
+              </span>
+            )}
+          </div>
         </div>
         {picker}
       </div>
@@ -139,13 +232,14 @@ export default function TaskItem({
         {task.text}
       </div>
 
-      <div className="relative shrink-0">
+      <div className="shrink-0">
         {task.scheduledDate ? (
           <div className="flex items-center gap-1">
             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
               {formatDate(task.scheduledDate)}
             </span>
             <button
+              ref={calBtnRef}
               type="button"
               onClick={handleCalendarClick}
               aria-label="Change date"
@@ -156,6 +250,7 @@ export default function TaskItem({
           </div>
         ) : (
           <button
+            ref={calBtnRef}
             type="button"
             onClick={handleCalendarClick}
             aria-label="Add date"

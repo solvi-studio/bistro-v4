@@ -4,7 +4,7 @@ export default async function HealthcheckAuthPage() {
   const { getToken } = await auth();
   const token = await getToken();
 
-  const res = await fetch(`${process.env.BE_DEV_BASE_URL}/healthcheck-auth`, {
+  const res = await fetch(`${process.env.API_URL}/healthcheck-auth`, {
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',

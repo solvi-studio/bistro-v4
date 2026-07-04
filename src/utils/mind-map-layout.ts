@@ -2,10 +2,10 @@ import type { Node } from "@xyflow/react";
 
 // Collision-aware placement for spawned mind-map nodes.
 //
-// New leaves used to be stacked by index (`count * 64`) regardless of where
-// existing nodes actually sit, so they overlapped neighbours and other hubs'
-// leaves. These helpers find the first free slot near a desired position by
-// testing real bounding boxes.
+// Every spawn goes through placeNode() / distributeGrid(), which test real
+// bounding boxes and return the first non-overlapping slot.  Manual drags can
+// still produce overlaps (intentional user action) — only placement-time
+// spawns are governed here.
 
 export interface Rect {
   x: number;
@@ -14,20 +14,44 @@ export interface Rect {
   h: number;
 }
 
-// Fallback leaf dimensions when a node hasn't been measured yet.
-const DEFAULT_W = 210;
-const DEFAULT_H = 40;
-// Minimum empty space kept between two boxes.
-const GAP = 14;
+// ── Sizing defaults ──────────────────────────────────────────────────────────
+// Conservative fallbacks for nodes that haven't been measured by RF yet.
+// Content nodes are 64–175+ px tall; 96 undershoots less than the old 40.
+const DEFAULT_W = 200;
+const DEFAULT_H = 96;
 
-export function rectOf(node: Node): Rect {
+// Minimum empty space kept between two boxes (bumped from 14 for more breathing
+// room, matching the ui-ux spacing-scale).
+const GAP = 28;
+
+// ── Node sizing ───────────────────────────────────────────────────────────────
+// Single source of truth: prefer React Flow's measured size, then explicit
+// node-level width/height, then data.width / data.minHeight (content nodes
+// store their size there), then fall back to defaults.
+function nodeSize(node: Node): { w: number; h: number } {
+  const data = (node.data ?? {}) as Record<string, unknown>;
+  // node.width / node.height can be null (RF stores null when unset).
+  // ?? already treats null as nullish, so null falls through to data.* → default.
   return {
-    x: node.position.x,
-    y: node.position.y,
-    w: node.width ?? node.measured?.width ?? DEFAULT_W,
-    h: node.height ?? node.measured?.height ?? DEFAULT_H,
+    w:
+      node.measured?.width ??
+      node.width ??
+      (typeof data.width === "number" ? data.width : undefined) ??
+      DEFAULT_W,
+    h:
+      node.measured?.height ??
+      node.height ??
+      (typeof data.minHeight === "number" ? data.minHeight : undefined) ??
+      DEFAULT_H,
   };
 }
+
+export function rectOf(node: Node): Rect {
+  const { w, h } = nodeSize(node);
+  return { x: node.position.x, y: node.position.y, w, h };
+}
+
+// ── Collision test ────────────────────────────────────────────────────────────
 
 function intersects(a: Rect, b: Rect, gap = GAP): boolean {
   return (
@@ -54,12 +78,14 @@ export function findFreePosition(
   w = DEFAULT_W,
   h = DEFAULT_H,
 ): { x: number; y: number } {
-  const colStep = (w + 40) * dirX;
+  const colStep = (w + GAP) * dirX;
   const rowStep = h + GAP;
 
-  for (let col = 0; col < 6; col++) {
+  // Wider search than before (10 cols × 24 rows) so crowded canvases still
+  // find a clear slot before falling back to the base position.
+  for (let col = 0; col < 10; col++) {
     const x = baseX + col * colStep;
-    for (let row = 0; row < 14; row++) {
+    for (let row = 0; row < 24; row++) {
       const dy =
         row === 0
           ? 0
@@ -74,68 +100,73 @@ export function findFreePosition(
   return { x: baseX, y: baseY };
 }
 
-// Minimal node-ish shape the hub passes in (position + measured size).
-export interface HubBox {
-  position: { x: number; y: number };
-  width?: number | null;
-  height?: number | null;
-  measured?: { width?: number; height?: number };
+/**
+ * Place a single node near (anchorX, anchorY), register it into `occupied`,
+ * and return its position.
+ *
+ * This is the one-shot version of the loop inside distributeGrid. Use it for
+ * menu adds (SceneNode) and cursor-drop nudging (spawnContentNode / onDrop).
+ * Because it mutates `occupied`, multiple sequential calls within the same
+ * event handler each see previously placed nodes, preventing them from
+ * overlapping each other.
+ */
+export function placeNode(
+  occupied: Rect[],
+  anchorX: number,
+  anchorY: number,
+  dir: -1 | 1,
+  w = DEFAULT_W,
+  h = DEFAULT_H,
+): { x: number; y: number } {
+  const pos = findFreePosition(occupied, anchorX, anchorY, dir, w, h);
+  occupied.push({ x: pos.x, y: pos.y, w, h });
+  return pos;
 }
 
 /**
- * Lay out `count` leaf positions in an evenly spaced column beside a hub.
+ * Lay `count` items in a row-major grid anchored at (`baseX`, `baseY`).
  *
- * Clean-spacing rules (ui-ux: spacing-scale / whitespace-balance): one column on
- * the hub's `dir` side, a fixed gap between leaves, the whole stack vertically
- * centred on the hub. Each slot is collision-checked via findFreePosition and
- * pushed into `occupied`, so successive calls (one per category) never overlap.
+ * Columns advance in the `dir` direction (1 = rightward, -1 = leftward).
+ * `baseX` must already account for cell width when `dir = -1` so that col 0
+ * sits immediately adjacent to the hub on its left.
+ *
+ * Each slot runs through `findFreePosition` for collision avoidance, then
+ * pushes itself into `occupied` so subsequent cells in the same batch don't
+ * overlap one another.
  */
-export function distributeBesideHub(
-  hub: HubBox,
+export function distributeGrid(
+  baseX: number,
+  baseY: number,
   count: number,
   occupied: Rect[],
   opts: {
-    dir?: -1 | 1;
-    leafW?: number;
-    leafH?: number;
+    cols?: number;
+    cellW?: number;
+    cellH?: number;
     gap?: number;
-    offsetX?: number;
+    dir?: -1 | 1;
   } = {},
 ): { x: number; y: number }[] {
   if (count <= 0) return [];
 
+  const cols = opts.cols ?? 2;
+  const cellW = opts.cellW ?? 260;
+  const cellH = opts.cellH ?? 175;
+  const gap = opts.gap ?? GAP;
   const dir = opts.dir ?? 1;
-  const leafW = opts.leafW ?? DEFAULT_W;
-  const leafH = opts.leafH ?? DEFAULT_H;
-  const gap = opts.gap ?? 16;
-  const offsetX = opts.offsetX ?? 240;
 
-  const hubW = hub.width ?? hub.measured?.width ?? 150;
-  const hubH = hub.height ?? hub.measured?.height ?? 44;
-  const hubCenterY = hub.position.y + hubH / 2;
-
-  // Column x on the hub's side, clear of the hub box.
-  const x =
-    dir > 0
-      ? hub.position.x + hubW + offsetX
-      : hub.position.x - offsetX - leafW;
-
-  const step = leafH + gap;
-  const totalH = count * leafH + (count - 1) * gap;
-  const startY = hubCenterY - totalH / 2;
+  const colStep = (cellW + gap) * dir;
+  const rowStep = cellH + gap;
 
   const positions: { x: number; y: number }[] = [];
   for (let i = 0; i < count; i++) {
-    const pos = findFreePosition(
-      occupied,
-      x,
-      startY + i * step,
-      dir,
-      leafW,
-      leafH,
-    );
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const slotX = baseX + col * colStep;
+    const slotY = baseY + row * rowStep;
+    const pos = findFreePosition(occupied, slotX, slotY, dir, cellW, cellH);
     positions.push(pos);
-    occupied.push({ x: pos.x, y: pos.y, w: leafW, h: leafH });
+    occupied.push({ x: pos.x, y: pos.y, w: cellW, h: cellH });
   }
   return positions;
 }

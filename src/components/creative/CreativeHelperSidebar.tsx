@@ -2,34 +2,42 @@
 
 import {
   Brain,
+  HelpCircle,
   ListChecks,
   Lock,
   PanelLeftClose,
   RotateCcw,
   Workflow,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   type ReactNode,
+  useCallback,
   useContext,
+  useEffect,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
+import { createPortal } from "react-dom";
+import CreativeFlowReminder from "@/components/creative/CreativeFlowReminder";
+import { PlatformIcon } from "@/components/creative/platformIcons";
 import { SplitContext } from "@/components/mind-map/canvas/ResizableSplit";
+import { getIdeaByClientId } from "@/lib/db/actions/ideas";
+import { platformLabel } from "@/utils/creative";
 import {
   getSummaryStatus,
+  initSummaryStatus,
   subscribeSummaryStatus,
 } from "@/utils/summarise-service";
-import CreativeFlowReminder from "./CreativeFlowReminder";
 
-// Reactive summary status — drives which downstream stages are unlocked.
-function useSummaryStatus() {
-  return useSyncExternalStore(
-    subscribeSummaryStatus,
-    getSummaryStatus,
-    () => null,
-  );
+// Reactive summary status — per-clientId, backed by in-memory cache.
+// Cache is warmed by initSummaryStatus (called in the sidebar on scriptId change).
+function useSummaryStatus(clientId: string) {
+  const getSnapshot = useCallback(() => getSummaryStatus(clientId), [clientId]);
+  return useSyncExternalStore(subscribeSummaryStatus, getSnapshot, () => null);
 }
 
 // The three creative stages. Each is its own route; in tab mode (onSelect set)
@@ -44,7 +52,7 @@ interface Step {
 
 const STEPS: Step[] = [
   {
-    href: "/mind-map",
+    href: "/brainstorm",
     icon: Brain,
     label: "Brainstorm",
     bg: "#f8dadb",
@@ -178,24 +186,61 @@ function StepTabs({
 export default function CreativeHelperSidebar({
   active,
   onSelect,
-  showReminder = true,
   children,
   embedded = false,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const summaryStatus = useSummaryStatus();
+  const scriptId = params.get("script");
+  const summaryStatus = useSummaryStatus(scriptId ?? "default");
   const split = useContext(SplitContext);
   const [collapsed, setCollapsed] = useState(false);
 
   // Collapse handler: embedded → the canvas split; standalone → own rail.
   const collapse = embedded ? split?.collapse : () => setCollapsed(true);
 
-  // Carry the active idea (?script=<id>) across step navigation so switching
-  // stages keeps the user in their current script instead of the default map.
-  const script = params.get("script");
-  const scriptQuery = script ? `?script=${encodeURIComponent(script)}` : "";
+  // Warm the status cache when the active script changes.
+  const scriptQuery = scriptId ? `?script=${encodeURIComponent(scriptId)}` : "";
+  const [script, setScript] = useState<
+    import("@/types/creative").CreativeScript | null
+  >(null);
+  useEffect(() => {
+    const id = scriptId ?? "default";
+    initSummaryStatus(id).catch(console.error);
+    if (!scriptId) {
+      setScript(null);
+      return;
+    }
+    getIdeaByClientId(scriptId).then(setScript).catch(console.error);
+  }, [scriptId]);
+  const scriptTitle = script?.title ?? null;
+
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guidePos, setGuidePos] = useState({ top: 0, left: 0 });
+  const guideBtnRef = useRef<HTMLButtonElement>(null);
+  const guideCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function openGuide() {
+    if (guideCloseTimer.current) {
+      clearTimeout(guideCloseTimer.current);
+      guideCloseTimer.current = null;
+    }
+    const rect = guideBtnRef.current?.getBoundingClientRect();
+    if (rect) setGuidePos({ top: rect.top, left: rect.right + 8 });
+    setGuideOpen(true);
+  }
+
+  function scheduleCloseGuide() {
+    guideCloseTimer.current = setTimeout(() => setGuideOpen(false), 1500);
+  }
+
+  function cancelCloseGuide() {
+    if (guideCloseTimer.current) {
+      clearTimeout(guideCloseTimer.current);
+      guideCloseTimer.current = null;
+    }
+  }
 
   // Tab mode uses the `active` prop; link mode derives it from the route.
   const activeIndex = onSelect
@@ -242,11 +287,12 @@ export default function CreativeHelperSidebar({
           locks={locks}
           iconOnly
         />
+
         <button
           type="button"
           onClick={rewatch}
           aria-label="Watch guide"
-          className="mt-auto grid h-9 w-9 place-items-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+          className="mt-auto grid h-9 w-9 place-items-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:border-primary hover:text-primary"
         >
           <RotateCcw size={15} />
         </button>
@@ -256,14 +302,23 @@ export default function CreativeHelperSidebar({
 
   return (
     <aside
-      className={`flex h-full min-h-0 shrink-0 flex-col border-r border-gray-100 bg-white font-[var(--font-poppins)] ${
-        embedded ? "w-full" : "w-[340px]"
+      className={`relative z-10 flex h-full min-h-0 shrink-0 flex-col border-r border-gray-100 bg-white font-(--font-poppins) ${
+        embedded ? "w-full" : "w-85"
       }`}
     >
       {/* Header — collapse button sits on the right, in normal flow. */}
       <div className="flex shrink-0 items-center border-b border-gray-100 px-5 py-4">
-        <h2 className="text-lg font-bold text-gray-800">
-          Your Creative Helper
+        <h2 className="flex items-center gap-2 text-lg font-bold text-gray-800">
+          {scriptTitle && (
+            <Image
+              src="/icon/glyphs-poly_sparkle.png"
+              alt=""
+              width={20}
+              height={20}
+              className="shrink-0"
+            />
+          )}
+          {scriptTitle ?? "Your Creative Helper"}
         </h2>
         {collapse && (
           <button
@@ -287,6 +342,56 @@ export default function CreativeHelperSidebar({
         />
       </div>
 
+      {/* Read-only goal box — platform + description */}
+      {script && (
+        <div className="shrink-0 border-b border-gray-100 px-5 py-4 flex flex-col gap-4">
+          {script.platform && (
+            <div className="flex items-center gap-2">
+              <PlatformIcon platform={script.platform} size={20} />
+              <span className="text-sm font-semibold text-gray-700">
+                {platformLabel(script.platform)}
+              </span>
+              <span className="ml-auto flex items-center gap-2">
+                <button
+                  ref={guideBtnRef}
+                  type="button"
+                  aria-label="Show creative flow guide"
+                  onMouseEnter={openGuide}
+                  onMouseLeave={scheduleCloseGuide}
+                  className="grid h-6 w-6 place-items-center rounded-full border border-gray-200 text-gray-400 transition-colors hover:border-primary hover:text-primary"
+                >
+                  <HelpCircle size={14} />
+                </button>
+                {guideOpen &&
+                  createPortal(
+                    <div
+                      role="tooltip"
+                      onMouseEnter={cancelCloseGuide}
+                      onMouseLeave={scheduleCloseGuide}
+                      style={{ top: guidePos.top, left: guidePos.left }}
+                      className="fixed z-9999 w-72 rounded-2xl border border-gray-100 bg-white p-4 shadow-lg"
+                    >
+                      <CreativeFlowReminder />
+                      <button
+                        type="button"
+                        onClick={() => router.push("/creative/guide?rewatch=1")}
+                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:border-primary hover:text-primary"
+                      >
+                        <RotateCcw size={15} />
+                        Watch guide
+                      </button>
+                    </div>,
+                    document.body,
+                  )}
+              </span>
+            </div>
+          )}
+          <p className="flex flex-col gap-2 rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm font-semibold text-gray-700">
+            {script.goal?.trim() || script.title}
+          </p>
+        </div>
+      )}
+
       {/* Content below the tabs — e.g. the mind-map shortlist */}
       {children && (
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
@@ -294,20 +399,24 @@ export default function CreativeHelperSidebar({
         </div>
       )}
 
-      {/* Flow reminder + watch guide (watch guide always visible) */}
-      <div
-        className={`flex shrink-0 flex-col px-5 pb-5 ${children ? "" : "flex-1"}`}
-      >
-        {showReminder && <CreativeFlowReminder />}
-        <button
-          type="button"
-          onClick={rewatch}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-        >
-          <RotateCcw size={15} />
-          Watch guide
-        </button>
-      </div>
+      {/* Back navigation — link mode only, not in guide/tab mode */}
+      {!onSelect && (activeIndex === 1 || activeIndex === 2) && (
+        <div className="mt-auto shrink-0 px-5 pb-5 pt-4">
+          <button
+            type="button"
+            onClick={() =>
+              router.push(
+                activeIndex === 1
+                  ? `/mind-map${scriptQuery}`
+                  : `/summarise${scriptQuery}`,
+              )
+            }
+            className="w-full rounded-full bg-green-100 py-3 text-sm font-semibold text-green-800 transition-colors hover:bg-green-200"
+          >
+            {activeIndex === 1 ? "Back to Canvas" : "Back to Summarise"}
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

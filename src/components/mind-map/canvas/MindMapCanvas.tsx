@@ -1,5 +1,6 @@
 "use client";
 
+import { useUser } from "@clerk/nextjs";
 import {
   addEdge,
   Background,
@@ -10,7 +11,6 @@ import {
   MiniMap,
   type Node,
   type OnConnect,
-  type OnNodeDrag,
   ReactFlow,
   ReactFlowProvider,
   useEdgesState,
@@ -22,12 +22,16 @@ import { Save, Sparkles } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  applyColorToNode,
-  getNodeThemeColor,
-} from "@/components/mind-map/utils/nodeColors";
+  spawnContentNode,
+  TOPIC_DND_MIME,
+  type TopicDragPayload,
+  VIDEO_DND_MIME,
+} from "@/components/mind-map/utils/spawnTopic";
+import { loadCanvas, saveCanvas } from "@/lib/db/actions/mindmap";
 import { pickHandles } from "@/utils/mind-map-handles";
-import { loadCanvas, saveCanvas } from "@/utils/mind-map-store";
+import { placeNode, rectOf } from "@/utils/mind-map-layout";
 import { exportMindMapGraph } from "@/utils/mindmap-export";
+import { recordFolderOpened } from "@/utils/recentFolder";
 import { submitMindMap } from "@/utils/summarise-service";
 import "@xyflow/react/dist/style.css";
 
@@ -35,7 +39,6 @@ import CreativeHelperSidebar from "@/components/creative/CreativeHelperSidebar";
 import { EraserCursor } from "@/components/mind-map/canvas/EraserCursor";
 import MindMapSidePanel from "@/components/mind-map/canvas/MindMapSidePanel";
 import ResizableSplit from "@/components/mind-map/canvas/ResizableSplit";
-import Toolbar from "@/components/mind-map/canvas/Toolbar";
 import {
   INITIAL_EDGES,
   INITIAL_NODES,
@@ -48,41 +51,75 @@ import {
 import { EDGE_MARKER, edgeTypes } from "@/components/mind-map/edges/edgeTypes";
 import { useEraser } from "@/components/mind-map/hooks/useEraser";
 import { useKeyboardShortcuts } from "@/components/mind-map/hooks/useKeyboardShortcuts";
+import { useNodeDragConnect } from "@/components/mind-map/hooks/useNodeDragConnect";
 import { nodeTypes } from "@/components/mind-map/nodes/nodeTypes";
-import { DEFAULT_DIMS } from "@/components/mind-map/nodes/ShapeNode";
 
 // ─── Cursor map per tool ──────────────────────────────────────────────────────
 
 const CURSOR: Record<Tool, string> = {
   select: "default",
-  sticky: "crosshair",
-  textbox: "text",
-  shape: "crosshair",
   connector: "crosshair",
   eraser: "none",
   video: "crosshair",
 };
 
-// Class applied to the node currently underneath a dragged node.
-const DROP_TARGET_CLASS = "mm-drop-target";
+// ─── Scene chain helpers (used by renumber effect) ────────────────────────────
 
-function setNodeHighlight(nodeId: string | null) {
-  for (const el of document.querySelectorAll(
-    `.react-flow__node.${DROP_TARGET_CLASS}`,
-  )) {
-    el.classList.remove(DROP_TARGET_CLASS);
+function buildSceneChainOrder(nodes: Node[], edges: Edge[]): string[] {
+  const sceneNodes = nodes.filter((n) => n.type === "scene");
+  const sceneSet = new Set(sceneNodes.map((n) => n.id));
+
+  const sceneNext = new Map<string, string>();
+  const sceneEdgeTargets = new Set<string>();
+  for (const e of edges) {
+    if (
+      e.type === "sceneEdge" &&
+      sceneSet.has(e.source) &&
+      sceneSet.has(e.target)
+    ) {
+      sceneNext.set(e.source, e.target);
+      sceneEdgeTargets.add(e.target);
+    }
   }
-  if (nodeId) {
-    document
-      .querySelector(`.react-flow__node[data-id="${nodeId}"]`)
-      ?.classList.add(DROP_TARGET_CLASS);
+
+  const roots = sceneNodes
+    .filter((n) => !sceneEdgeTargets.has(n.id))
+    .map((n) => n.id);
+
+  const ordered: string[] = [];
+  const visited = new Set<string>();
+  for (const root of roots) {
+    let cur: string | undefined = root;
+    while (cur && !visited.has(cur) && sceneSet.has(cur)) {
+      ordered.push(cur);
+      visited.add(cur);
+      cur = sceneNext.get(cur);
+    }
   }
+  // Append disconnected scenes
+  for (const n of sceneNodes) {
+    if (!visited.has(n.id)) ordered.push(n.id);
+  }
+  return ordered;
 }
 
-// ─── Inner canvas (must be inside ReactFlowProvider) ─────────────────────────
+// ─── Connection direction + chain validation ──────────────────────────────────
+
+function wouldBreakChain(
+  sourceId: string,
+  targetId: string,
+  edges: Edge[],
+): boolean {
+  return (
+    edges.some((e) => e.type === "sceneEdge" && e.source === sourceId) ||
+    edges.some((e) => e.type === "sceneEdge" && e.target === targetId)
+  );
+}
+
+// ─── Inner canvas ─────────────────────────────────────────────────────────────
 
 function CanvasInner() {
-  const { activeTool, setActiveTool, pendingShape } = useTool();
+  const { activeTool, setActiveTool } = useTool();
   const {
     screenToFlowPosition,
     deleteElements,
@@ -91,48 +128,68 @@ function CanvasInner() {
     addNodes,
     getViewport,
     setViewport,
-    getIntersectingNodes,
   } = useReactFlow();
   const router = useRouter();
   const params = useSearchParams();
-  // Each idea (script) keeps its own canvas; "default" when opened standalone.
   const mapId = params.get("script") ?? "default";
+  const { user } = useUser();
+  const userId = user?.id;
 
-  // Render the defaults on both server and client (no storage read during
-  // render — that would diverge from the SSR HTML and trip hydration).
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
 
-  // Restore the saved canvas after mount; persistence is gated on this so we
-  // never write the defaults over saved data before it loads.
   const restored = useRef(false);
   useEffect(() => {
-    const saved = loadCanvas(mapId);
-    if (saved) {
-      setNodes(saved.nodes);
-      setEdges(saved.edges);
-      if (saved.viewport) setViewport(saved.viewport);
-    }
-    restored.current = true;
-  }, [mapId, setNodes, setEdges, setViewport]);
+    restored.current = false;
+    if (userId) recordFolderOpened(userId, mapId);
+    loadCanvas(mapId)
+      .then((saved) => {
+        if (saved) {
+          setNodes(saved.nodes);
+          setEdges(saved.edges);
+          if (saved.viewport)
+            setViewport(saved.viewport as Parameters<typeof setViewport>[0]);
+        }
+      })
+      .catch(console.error)
+      .finally(() => {
+        restored.current = true;
+      });
+  }, [mapId, userId, setNodes, setEdges, setViewport]);
 
-  // Persist canvas changes, debounced so rapid drags don't thrash storage.
+  // Debounced autosave (fire-and-forget — DB write)
   useEffect(() => {
     if (!restored.current) return;
     const t = setTimeout(() => {
-      saveCanvas(mapId, { nodes, edges, viewport: getViewport() });
-    }, 400);
+      saveCanvas(mapId, { nodes, edges, viewport: getViewport() }).catch(
+        console.error,
+      );
+    }, 800);
     return () => clearTimeout(t);
   }, [mapId, nodes, edges, getViewport]);
 
-  // Id of the node a dragged node is currently hovering over (drop target).
-  const dropTargetRef = useRef<string | null>(null);
+  // ── Scene renumber — keep Scene N labels sequential after add/delete ────────
+  useEffect(() => {
+    if (!restored.current) return;
+    const ordered = buildSceneChainOrder(nodes, edges);
+    let needsUpdate = false;
+    const updated = nodes.map((n) => {
+      if (n.type !== "scene") return n;
+      const idx = ordered.indexOf(n.id);
+      const expected =
+        idx >= 0 ? `Scene ${idx + 1}` : (n.data as { label?: string }).label;
+      if ((n.data as { label?: string }).label === expected) return n;
+      needsUpdate = true;
+      return { ...n, data: { ...n.data, label: expected } };
+    });
+    if (needsUpdate) setNodes(updated);
+  }, [nodes, edges, setNodes]);
 
   const isSelectTool = activeTool === "select";
 
   const { isEraserActive, eraserPos, handlers: eraserHandlers } = useEraser();
 
-  // ── Minimap visibility — show while panning, hide 1.5s after stopping ────
+  // ── Minimap — show while panning, hide 1.5s after stopping ───────────────
   const [showMinimap, setShowMinimap] = useState(false);
   const minimapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -143,12 +200,11 @@ function CanvasInner() {
     },
     onEnd: () => {
       minimapTimer.current = setTimeout(() => setShowMinimap(false), 1500);
-      // Viewport-only changes don't trip the node/edge effect — save here too.
       saveCanvas(mapId, {
         nodes: getNodes(),
         edges: getEdges(),
         viewport: getViewport(),
-      });
+      }).catch(console.error);
     },
   });
 
@@ -161,30 +217,64 @@ function CanvasInner() {
     setEdges,
   });
 
-  // ── Edge connection (connector tool only) ──────────────────────────────────
+  // ── Edge connection (connector tool) ──────────────────────────────────────
   const isValidConnection = useCallback(
     (connection: Edge | Connection) => {
       if (connection.source === connection.target) return false;
-      return !getEdges().some(
-        (e) => e.source === connection.source && e.target === connection.target,
+
+      // No duplicate edges (either direction)
+      const existingEdge = getEdges().some(
+        (e) =>
+          (e.source === connection.source && e.target === connection.target) ||
+          (e.source === connection.target && e.target === connection.source),
       );
+      if (existingEdge) return false;
+
+      return true;
     },
     [getEdges],
   );
 
   const onConnect: OnConnect = useCallback(
     (connection) => {
-      if (activeTool !== "connector") return;
-      // Re-pick the facing handles from node positions so the edge attaches at
-      // the correct angle regardless of which handles the drag used.
+      if (activeTool !== "connector" && activeTool !== "select") return;
+
       const ns = getNodes();
-      const s = ns.find((n) => n.id === connection.source);
-      const t = ns.find((n) => n.id === connection.target);
-      const handles = s && t ? pickHandles(s, t) : {};
+      let src = ns.find((n) => n.id === connection.source);
+      let tgt = ns.find((n) => n.id === connection.target);
+      if (!src || !tgt) return;
+
+      // Normalise direction: scene → non-scene
+      if (tgt.type === "scene" && src.type !== "scene") {
+        [src, tgt] = [tgt, src];
+      }
+
+      // Scene → scene: enforce linear chain
+      if (src.type === "scene" && tgt.type === "scene") {
+        if (wouldBreakChain(src.id, tgt.id, getEdges())) return;
+        setEdges((eds) =>
+          addEdge(
+            {
+              id: `se-${src.id}-${tgt.id}`,
+              source: src.id,
+              target: tgt.id,
+              type: "sceneEdge",
+              sourceHandle: "bottom",
+              targetHandle: "top",
+            },
+            eds,
+          ),
+        );
+        return;
+      }
+
+      // All other connections: labeled with arrow from source
+      const handles = pickHandles(src, tgt);
       setEdges((eds) =>
         addEdge(
           {
-            ...connection,
+            source: src.id,
+            target: tgt.id,
             ...handles,
             type: "labeled",
             data: { arrowEnd: true },
@@ -194,147 +284,90 @@ function CanvasInner() {
         ),
       );
     },
-    [activeTool, setEdges, getNodes],
+    [activeTool, setEdges, getNodes, getEdges],
   );
 
-  // ── Hover-to-connect — drag a node onto another to auto-link them ──────────
-  const firstIntersectingId = useCallback(
-    (node: Node): string | null => {
-      const hit = getIntersectingNodes(node, true).find(
-        (n) => n.id !== node.id,
-      );
-      return hit?.id ?? null;
-    },
-    [getIntersectingNodes],
-  );
+  // ── Drag-to-link ──────────────────────────────────────────────────────────
+  const { onNodeDrag, onNodeDragStop } = useNodeDragConnect({ setEdges });
 
-  const onNodeDrag: OnNodeDrag = useCallback(
-    (_e, node) => {
-      const targetId = firstIntersectingId(node);
-      if (targetId !== dropTargetRef.current) {
-        dropTargetRef.current = targetId;
-        setNodeHighlight(targetId);
-      }
-    },
-    [firstIntersectingId],
-  );
-
-  const onNodeDragStop: OnNodeDrag = useCallback(
-    (_e, node) => {
-      const targetId = dropTargetRef.current;
-      dropTargetRef.current = null;
-      setNodeHighlight(null);
-      if (!targetId) return;
-
-      const target = getNodes().find((n) => n.id === targetId);
-      if (!target) return;
-
-      // Skip if these two are already linked (either direction).
-      const alreadyLinked = getEdges().some(
-        (e) =>
-          (e.source === target.id && e.target === node.id) ||
-          (e.source === node.id && e.target === target.id),
-      );
-      if (!alreadyLinked) {
-        const { sourceHandle, targetHandle } = pickHandles(target, node);
-        setEdges((eds) =>
-          addEdge(
-            {
-              id: `e-${target.id}-${node.id}`,
-              source: target.id,
-              target: node.id,
-              sourceHandle,
-              targetHandle,
-              type: "labeled",
-              data: { arrowEnd: true },
-              markerEnd: EDGE_MARKER,
-            },
-            eds,
-          ),
-        );
-      }
-
-      // Dragged node adopts the color of the node it landed on.
-      const palette = getNodeThemeColor(target);
-      setNodes((ns) =>
-        ns.map((n) => {
-          if (n.id !== node.id) return n;
-          const patch = applyColorToNode(n, palette);
-          return {
-            ...n,
-            ...patch,
-            data: { ...n.data, ...(patch.data ?? {}) },
-            style: { ...n.style, ...(patch.style ?? {}) },
-          };
-        }),
-      );
-    },
-    [getNodes, getEdges, setEdges, setNodes],
-  );
-
-  // ── Manual save ────────────────────────────────────────────────────────────
+  // ── Manual save ───────────────────────────────────────────────────────────
   const [savedFlash, setSavedFlash] = useState(false);
   const handleSave = useCallback(() => {
-    saveCanvas(mapId, { nodes, edges, viewport: getViewport() });
+    saveCanvas(mapId, { nodes, edges, viewport: getViewport() }).catch(
+      console.error,
+    );
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1500);
   }, [mapId, nodes, edges, getViewport]);
 
-  // ── Finalise — export graph, submit to backend, go to summarise ────────────
-  const handleFinalise = useCallback(() => {
-    submitMindMap(exportMindMapGraph(nodes, edges));
-    // Keep the active idea in the URL so the summarise/plan stages stay in this
-    // script's context rather than the default map.
+  // ── Finalise ──────────────────────────────────────────────────────────────
+  const handleFinalise = useCallback(async () => {
+    const scriptId = mapId !== "default" ? mapId : undefined;
+    try {
+      const graph = await exportMindMapGraph(nodes, edges, scriptId);
+      submitMindMap(graph, mapId).catch(console.error);
+    } catch (err) {
+      console.error("Failed to export mind map:", err);
+      return;
+    }
     const query =
       mapId !== "default" ? `?script=${encodeURIComponent(mapId)}` : "";
     router.push(`/summarise${query}`);
   }, [nodes, edges, router, mapId]);
 
-  // ── Pane click — place sticky or textbox ──────────────────────────────────
-  const onPaneClick = useCallback(
-    (e: React.MouseEvent) => {
+  // ── Drag-and-drop — sidebar chip or video card ────────────────────────────
+  const onDragOver = useCallback((e: React.DragEvent) => {
+    if (
+      e.dataTransfer.types.includes(TOPIC_DND_MIME) ||
+      e.dataTransfer.types.includes(VIDEO_DND_MIME)
+    ) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  }, []);
+
+  const onDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
       const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
 
-      if (activeTool === "sticky") {
+      // Video node drop — nudge to nearest free slot if cursor lands on a node.
+      if (e.dataTransfer.types.includes(VIDEO_DND_MIME)) {
+        const occupied = getNodes().map(rectOf);
+        const pos = placeNode(occupied, position.x, position.y, 1, 280, 380);
         addNodes({
-          id: `sticky-${Date.now()}`,
-          type: "sticky",
-          position,
-          data: { text: "", color: "#fef9c3", fontSize: 14 },
+          id: `videoDrop-${Date.now()}`,
+          type: "videoDrop",
+          position: pos,
+          data: { status: "idle" },
         });
-        setActiveTool("select");
+        return;
       }
 
-      if (activeTool === "textbox") {
-        addNodes({
-          id: `textbox-${Date.now()}`,
-          type: "textbox",
-          position,
-          data: { html: "", fontSize: "md" },
-          style: { width: 200 },
-        });
-        setActiveTool("select");
+      // Content chip drop — spawnContentNode handles collision + nudge.
+      const raw = e.dataTransfer.getData(TOPIC_DND_MIME);
+      if (!raw) return;
+      let payload: TopicDragPayload;
+      try {
+        payload = JSON.parse(raw) as TopicDragPayload;
+      } catch {
+        return;
       }
+      spawnContentNode(
+        { addNodes, getNodes },
+        payload.category,
+        payload.header,
+        position,
+      );
+    },
+    [screenToFlowPosition, addNodes, getNodes],
+  );
 
-      if (activeTool === "shape") {
-        const dims = DEFAULT_DIMS[pendingShape];
-        addNodes({
-          id: `shape-${Date.now()}`,
-          type: "shape",
-          position,
-          data: {
-            text: "",
-            shape: pendingShape,
-            fillColor: "#ffffff",
-            strokeColor: "#94a3b8",
-            fontSize: 14,
-          },
-          style: { width: dims.width, height: dims.height },
-        });
-        setActiveTool("select");
-      }
-
+  // ── Pane click — place video node ─────────────────────────────────────────
+  const onPaneClick = useCallback(
+    (e: React.MouseEvent) => {
       if (activeTool === "video") {
+        const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
         addNodes({
           id: `videoDrop-${Date.now()}`,
           type: "videoDrop",
@@ -344,7 +377,7 @@ function CanvasInner() {
         setActiveTool("select");
       }
     },
-    [activeTool, pendingShape, screenToFlowPosition, addNodes, setActiveTool],
+    [activeTool, screenToFlowPosition, addNodes, setActiveTool],
   );
 
   return (
@@ -355,26 +388,29 @@ function CanvasInner() {
       onPointerUp={eraserHandlers.onPointerUp}
       onPointerLeave={eraserHandlers.onPointerLeave}
     >
-      <div className="absolute top-3 right-3 z-10 flex gap-2 pointer-events-auto">
-        {/* <button type="button" title="Export JSON" onClick={() => exportMindMapJSON(nodes, edges, getViewport())} className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"><Download size={14} /> Export</button> */}
-        {/* <button type="button" title="Export for AI analysis" onClick={() => exportMindMapForAI(nodes, edges)} className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"><Bot size={14} /> AI Export</button> */}
-        <button
-          type="button"
-          title="Save canvas"
-          onClick={handleSave}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
-        >
-          <Save size={14} />
-          {savedFlash ? "Saved!" : "Save"}
-        </button>
-        <button
-          type="button"
-          title="Finalise idea and generate summary"
-          onClick={handleFinalise}
-          className="flex items-center gap-1.5 rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[var(--color-primary-hover)]"
-        >
-          <Sparkles size={14} /> Finalise
-        </button>
+      <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-1 pointer-events-auto">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            title="Save canvas"
+            onClick={handleSave}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+          >
+            <Save size={14} />
+            {savedFlash ? "Saved!" : "Save"}
+          </button>
+          <button
+            type="button"
+            title="Finalise idea and generate summary"
+            onClick={handleFinalise}
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-(--color-primary-hover)"
+          >
+            <Sparkles size={14} /> Finalise
+          </button>
+        </div>
+        <p className="text-[11px] text-gray-400 text-right pointer-events-none">
+          Not saved automatically — click Save to keep changes.
+        </p>
       </div>
 
       <ReactFlow
@@ -387,18 +423,19 @@ function CanvasInner() {
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onPaneClick={onPaneClick}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
         onNodeClick={eraserHandlers.onNodeClick}
         onNodeMouseEnter={eraserHandlers.onNodeMouseEnter}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         nodesDraggable={isSelectTool}
-        nodesConnectable={activeTool === "connector"}
+        nodesConnectable={activeTool === "connector" || isSelectTool}
         elementsSelectable={isSelectTool}
         panOnDrag={isSelectTool || activeTool === "connector"}
         selectionOnDrag={isSelectTool}
         selectNodesOnDrag={false}
         deleteKeyCode={null}
-        // fitView
         fitViewOptions={{ padding: 0.3 }}
         defaultViewport={{ x: 250, y: 250, zoom: 1 }}
         minZoom={0.1}
@@ -412,11 +449,11 @@ function CanvasInner() {
           color="#e5e7eb"
         />
         <Controls
-          className="!border !border-gray-200 !shadow-sm !rounded-xl overflow-hidden"
+          className="border! border-gray-200! shadow-sm! rounded-xl! overflow-hidden"
           showInteractive={false}
         />
         <MiniMap
-          className="!border !border-gray-200 !shadow-sm !rounded-xl overflow-hidden !transition-opacity !duration-300"
+          className="border! border-gray-200! shadow-sm! rounded-xl! overflow-hidden transition-opacity! duration-300!"
           style={{
             opacity: showMinimap ? 1 : 0,
             pointerEvents: showMinimap ? "auto" : "none",
@@ -437,19 +474,10 @@ function CanvasInner() {
 
 function CanvasRoot() {
   const params = useSearchParams();
-  // Remount the whole flow when the active idea changes so each map loads its
-  // own persisted seed (refs/state reset on a fresh mount).
   const mapId = params.get("script") ?? "default";
 
   return (
     <div className="w-full h-full flex flex-col bg-white overflow-hidden">
-      {/* <header className="shrink-0 h-11 border-b border-gray-100 flex items-center px-4 gap-3"> */}
-      {/* <span className="text-sm font-semibold text-gray-800 tracking-tight">
-          Mind Map
-        </span>
-        <ActiveToolBadge /> */}
-      {/* </header> */}
-
       <div className="relative flex-1 overflow-hidden">
         <ReactFlowProvider key={mapId}>
           <ResizableSplit
@@ -458,12 +486,7 @@ function CanvasRoot() {
                 <MindMapSidePanel />
               </CreativeHelperSidebar>
             }
-            right={
-              <>
-                <CanvasInner />
-                <Toolbar />
-              </>
-            }
+            right={<CanvasInner />}
           />
         </ReactFlowProvider>
       </div>

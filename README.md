@@ -1,4 +1,4 @@
-# bistro-v3
+# bistro-v4
 
 Next.js 16 app-router project for the Bistro web experience.
 
@@ -11,7 +11,7 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Current Migration Status
+## Current Migration Status (THIS NEEDS TO BE AUDITED AND CLEAN UP)
 
 ### Onboarding slice (ported)
 
@@ -26,7 +26,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - To replay onboarding in non-production environments, visit: `/onboarding/reset`
 - The reset route clears onboarding local storage state and redirects to `/onboarding`.
 
-## Next Slice
+### Next Slice
 
 - Port the bookmarks/workspace experience and replace the temporary `/` placeholder destination with real app navigation.
 
@@ -39,6 +39,7 @@ Open [http://localhost:3000](http://localhost:3000).
 DO NOT use `drizzle-kit push`
 
 Drizzle-kit is notorious for not producing logs if it s command fail, if so, you can test with spinning up local Postgres
+
 1. Write `docker-compose.yaml`
 2. Run the service
 3. Interact with the local db using Drizzle to see logs

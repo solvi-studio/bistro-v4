@@ -3,10 +3,10 @@
 import { PanelLeftOpen } from "lucide-react";
 import { createContext, type ReactNode, useRef, useState } from "react";
 import {
-  type ImperativePanelHandle,
+  type PanelImperativeHandle,
   Panel,
-  PanelGroup,
-  PanelResizeHandle,
+  Group,
+  Separator,
 } from "react-resizable-panels";
 
 interface Props {
@@ -25,18 +25,18 @@ const SNAP_POINTS = [30, 50];
 const SNAP_THRESHOLD = 7;
 
 export default function ResizableSplit({ left, right }: Props) {
-  const leftRef = useRef<ImperativePanelHandle>(null);
+  const leftRef = useRef<PanelImperativeHandle>(null);
   const [collapsed, setCollapsed] = useState(false);
 
-  function handleDragging(isDragging: boolean) {
-    if (isDragging) return; // only act when the drag ends
+  function handleLayoutChanged() {
     const panel = leftRef.current;
     if (!panel || panel.isCollapsed()) return;
-    const current = panel.getSize();
+    const current = panel.getSize().asPercentage;
     const near = SNAP_POINTS.find(
       (p) => Math.abs(p - current) <= SNAP_THRESHOLD,
     );
-    if (near != null) panel.resize(near);
+    if (near != null && Math.abs(current - near) > 0.01)
+      panel.resize(`${near}%`);
   }
 
   function toggleCollapse() {
@@ -49,30 +49,30 @@ export default function ResizableSplit({ left, right }: Props) {
   return (
     <SplitContext.Provider value={{ collapse: toggleCollapse }}>
       <div className="relative h-full w-full">
-        <PanelGroup direction="horizontal" className="h-full">
+        <Group
+          orientation="horizontal"
+          className="h-full"
+          onLayoutChanged={handleLayoutChanged}
+        >
           <Panel
-            ref={leftRef}
+            panelRef={leftRef}
             collapsible
-            collapsedSize={0}
-            defaultSize={30}
-            minSize={15}
-            maxSize={50}
-            onCollapse={() => setCollapsed(true)}
-            onExpand={() => setCollapsed(false)}
+            collapsedSize="0%"
+            defaultSize="30%"
+            minSize="15%"
+            maxSize="50%"
+            onResize={(panelSize) => setCollapsed(panelSize.asPercentage === 0)}
             className="overflow-hidden"
           >
             {left}
           </Panel>
 
-          <PanelResizeHandle
-            onDragging={handleDragging}
-            className="group relative w-1.5 bg-gray-100 transition-colors data-[resize-handle-state=drag]:bg-[var(--color-primary)] data-[resize-handle-state=hover]:bg-blue-200"
-          >
+          <Separator className="group relative w-1.5 bg-gray-100 transition-colors data-[separator=active]:bg-primary data-[separator=hover]:bg-blue-200">
             <span className="absolute inset-y-0 -left-1.5 -right-1.5" />
-          </PanelResizeHandle>
+          </Separator>
 
           <Panel className="relative">{right}</Panel>
-        </PanelGroup>
+        </Group>
 
         {/* Expand tab — only when collapsed (panel hidden, so the helper's own
             header button isn't reachable). No overlap then. */}

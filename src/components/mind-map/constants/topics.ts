@@ -3,6 +3,19 @@ import type { CSSProperties } from "react";
 export const IDEA_ID = "idea";
 export const IDEA_POS = { x: 430, y: 320 };
 
+// ── Content category type (shared by ContentNode, SceneNode, sidebar) ─────────
+
+export type ContentCategory = "visual" | "audio" | "script";
+
+export const CATEGORY_THEME: Record<
+  ContentCategory,
+  { headerBg: string; headerText: string; bodyText: string }
+> = {
+  visual: { headerBg: "#fbe0e1", headerText: "#d6494e", bodyText: "#6b2b2e" },
+  audio:  { headerBg: "#e3ecfb", headerText: "#3b6fd4", bodyText: "#2a3f6b" },
+  script: { headerBg: "#fbeec6", headerText: "#b08400", bodyText: "#6b5410" },
+};
+
 export interface TopicSection {
   /** Optional sub-heading shown above the items (e.g. "Format"). */
   label?: string;
@@ -20,13 +33,16 @@ export interface MindMapGroup {
   leafDir: -1 | 1;
   leafBg: string;
   leafText: string;
+  /** body text colour for content nodes spawned from this group */
+  bodyText: string;
+  /** Maps to a ContentCategory for non-script groups (undefined for fromScript). */
+  category?: ContentCategory;
   /** When true, sections are derived at runtime from the active script. */
   fromScript?: boolean;
   sections: TopicSection[];
 }
 
-// The 4 required hub nodes that ring the central idea node. Every panel-spawned
-// topic node attaches to one of these hubs.
+// The 4 hub nodes that ring the central idea node.
 export const MIND_MAP_GROUPS: MindMapGroup[] = [
   {
     hubId: "hub-bigpicture",
@@ -36,65 +52,132 @@ export const MIND_MAP_GROUPS: MindMapGroup[] = [
     leafDir: 1,
     leafBg: "#fbe0e1",
     leafText: "#d6494e",
+    bodyText: "#6b2b2e",
     fromScript: true,
     sections: [],
   },
   {
-    hubId: "hub-composition",
-    hubLabel: "Composition",
+    hubId: "hub-visual",
+    hubLabel: "Visual",
     hubBg: "#1f2430",
     hubPos: { x: 120, y: 90 },
     leafDir: -1,
-    leafBg: "#e3ecfb",
-    leafText: "#3b6fd4",
+    leafBg: "#fbe0e1",
+    leafText: "#d6494e",
+    bodyText: "#6b2b2e",
+    category: "visual",
     sections: [
       {
-        label: "Format",
-        items: ["Short-form 60 secs", "Live Stream", "Video Series"],
-        allowAdd: true,
-      },
-      {
-        label: "Type of Shooting",
-        items: ["Wide shot", "Close up", "Shoulder Level"],
+        items: ["Scene Description", "Shooting Style"],
         allowAdd: true,
       },
     ],
   },
   {
-    hubId: "hub-tone",
-    hubLabel: "Tone & Mood",
+    hubId: "hub-audio",
+    hubLabel: "Audio",
     hubBg: "#1f2430",
     hubPos: { x: 90, y: 320 },
     leafDir: -1,
-    leafBg: "#ededed",
-    leafText: "#4b5563",
+    leafBg: "#e3ecfb",
+    leafText: "#3b6fd4",
+    bodyText: "#2a3f6b",
+    category: "audio",
     sections: [
       {
-        items: ["Warm & soft", "Energetic", "Calm & cinematic", "Playful"],
+        items: ["Voiceover", "Trending Music", "Sound Effect"],
         allowAdd: true,
       },
     ],
   },
   {
-    hubId: "hub-audience",
-    hubLabel: "Target Audience",
+    hubId: "hub-script",
+    hubLabel: "Script",
     hubBg: "#1f2430",
     hubPos: { x: 120, y: 550 },
     leafDir: -1,
-    leafBg: "#ededed",
-    leafText: "#4b5563",
+    leafBg: "#fbeec6",
+    leafText: "#b08400",
+    bodyText: "#6b5410",
+    category: "script",
     sections: [
       {
-        items: ["Lifestyle GenZ", "Fitness enthusiasts", "Travel lovers"],
+        items: ["Script Writing", "Timing"],
         allowAdd: true,
       },
     ],
   },
 ];
 
+/** Returns the option items for a given content category (from the matching hub). */
+export function categoryOptions(category: ContentCategory): string[] {
+  const group = MIND_MAP_GROUPS.find((g) => g.category === category);
+  return group?.sections.flatMap((s) => s.items) ?? [];
+}
+
+// ── Video analysis types ──────────────────────────────────────────────────────
+// Mirrors the backend CATEGORY_TYPES / VALID_TYPES from genai_modules.py.
+// Single source of truth: used for the checkbox UI and for mapping BE response
+// types → ContentNodeData (category + header).
+
+export type VideoAnalysisType =
+  | "scene_description"
+  | "shooting_style"
+  | "voiceover"
+  | "music"
+  | "sound_effect"
+  | "concept_writing";
+
+export const VIDEO_ANALYSIS_TYPES: ReadonlyArray<{
+  category: ContentCategory;
+  /** Section heading shown in the VideoNode type picker. */
+  label: string;
+  types: ReadonlyArray<{ value: VideoAnalysisType; label: string }>;
+}> = [
+  {
+    category: "visual",
+    label: "Visual",
+    types: [
+      { value: "scene_description", label: "Scene Description" },
+      { value: "shooting_style",    label: "Shooting Style" },
+    ],
+  },
+  {
+    category: "audio",
+    label: "Audio",
+    types: [
+      { value: "voiceover",    label: "Voiceover" },
+      { value: "music",        label: "Music" },
+      { value: "sound_effect", label: "Sound Effect" },
+    ],
+  },
+  {
+    category: "script",
+    label: "Script",
+    types: [{ value: "concept_writing", label: "Script Writing" }],
+  },
+] as const;
+
+/**
+ * Flat lookup from a BE type string → the content node's `category` + `header`.
+ * Used in `VideoNode.spawnResults` to convert `{ type, content }` response
+ * items into `ContentNodeData` without coupling to the BE string values at the
+ * component layer.
+ */
+export const TYPE_TO_CONTENT: Record<
+  VideoAnalysisType,
+  { category: ContentCategory; header: string }
+> = Object.fromEntries(
+  VIDEO_ANALYSIS_TYPES.flatMap((group) =>
+    group.types.map((t) => [
+      t.value,
+      { category: group.category, header: t.label },
+    ]),
+  ),
+) as Record<VideoAnalysisType, { category: ContentCategory; header: string }>;
+
 // ── Anchor (locked) nodes ───────────────────────────────────────────────────
 // Only the central idea (Scene 1) is locked — it can't be deleted or erased.
-// The hub nodes are now freely editable and deletable like any other node.
 export const ANCHOR_NODE_IDS: ReadonlySet<string> = new Set([IDEA_ID]);
 
 export interface NodePalette {
@@ -144,10 +227,9 @@ export function leafNodeStyle(bg: string, text: string): CSSProperties {
     color: text,
     border: "none",
     borderRadius: 999,
-    padding: "8px 16px",
-    fontSize: 12,
+    padding: "24px 32px",
+    fontSize: 14,
     fontWeight: 600,
-    // No maxWidth — lets the node be resized wider via the NodeResizer.
     boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
   };
 }
