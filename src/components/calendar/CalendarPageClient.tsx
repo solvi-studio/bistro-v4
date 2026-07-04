@@ -135,7 +135,7 @@ export default function CalendarPageClient() {
     input: {
       date: string;
       title: string;
-      notes: string[];
+      notes: string;
       time?: string;
       endTime?: string;
       location?: string;

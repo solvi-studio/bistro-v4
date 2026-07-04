@@ -14,7 +14,7 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import { pickHandles, type HandleSide } from "@/utils/mind-map-handles";
-import { ArrowLeft, ArrowRight, Trash2, Type } from "lucide-react";
+import { Trash2, Type } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -52,6 +52,32 @@ function sideToCoords(
     case "left":   return { x: absPos.x,          y: absPos.y + h / 2, position: Position.Left };
     case "right":  return { x: absPos.x + w,      y: absPos.y + h / 2, position: Position.Right };
   }
+}
+
+// ─── Node box size ────────────────────────────────────────────────────────────
+// Mirrors mind-map-layout.ts's nodeSize(): prefer RF's measured size, then
+// explicit node-level width/height, then data.width/minHeight (what a manual
+// resize writes immediately — measured can lag behind it by a frame or more
+// via React Flow's async ResizeObserver), then fall back to a default.
+function nodeBoxSize(node: {
+  measured?: { width?: number; height?: number };
+  width?: number | null;
+  height?: number | null;
+  data?: unknown;
+}): { w: number; h: number } {
+  const data = (node.data ?? {}) as Record<string, unknown>;
+  return {
+    w:
+      node.measured?.width ??
+      node.width ??
+      (typeof data.width === "number" ? data.width : undefined) ??
+      150,
+    h:
+      node.measured?.height ??
+      node.height ??
+      (typeof data.minHeight === "number" ? data.minHeight : undefined) ??
+      50,
+  };
 }
 
 // ─── Path helper ──────────────────────────────────────────────────────────────
@@ -95,14 +121,12 @@ export default function LabeledEdge({
   markerEnd,
   data,
 }: EdgeProps<LabeledEdgeType>) {
-  const { updateEdgeData, setEdges, deleteElements } = useReactFlow();
+  const { updateEdgeData, deleteElements } = useReactFlow();
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const edgeType: EdgeStyleType = data?.edgeType ?? "smoothstep";
   const label = data?.label ?? "";
-  const arrowStart = data?.arrowStart ?? false;
-  const arrowEnd = data?.arrowEnd ?? true;
 
   // Re-pick handles dynamically from current node positions so the edge always
   // exits/enters the closest side regardless of which handle was stored at creation.
@@ -115,10 +139,8 @@ export default function LabeledEdge({
   if (srcNode && tgtNode) {
     const srcAbs = srcNode.internals.positionAbsolute;
     const tgtAbs = tgtNode.internals.positionAbsolute;
-    const srcW = srcNode.measured?.width ?? 150;
-    const srcH = srcNode.measured?.height ?? 50;
-    const tgtW = tgtNode.measured?.width ?? 150;
-    const tgtH = tgtNode.measured?.height ?? 50;
+    const { w: srcW, h: srcH } = nodeBoxSize(srcNode);
+    const { w: tgtW, h: tgtH } = nodeBoxSize(tgtNode);
 
     const { sourceHandle, targetHandle } = pickHandles(
       { position: srcAbs, measured: { width: srcW, height: srcH } },
@@ -139,37 +161,6 @@ export default function LabeledEdge({
     targetY: tY,
     targetPosition: tPos,
   });
-
-  const toggleArrow = useCallback(
-    (side: "start" | "end") => {
-      const isStart = side === "start";
-      const current = isStart ? arrowStart : arrowEnd;
-      const next = !current;
-      setEdges((eds) =>
-        eds.map((e) => {
-          if (e.id !== id) return e;
-          return {
-            ...e,
-            markerStart: isStart
-              ? next
-                ? EDGE_MARKER
-                : undefined
-              : e.markerStart,
-            markerEnd: !isStart
-              ? next
-                ? EDGE_MARKER
-                : undefined
-              : e.markerEnd,
-            data: {
-              ...e.data,
-              [isStart ? "arrowStart" : "arrowEnd"]: next,
-            },
-          };
-        }),
-      );
-    },
-    [id, arrowStart, arrowEnd, setEdges],
-  );
 
   const startEditing = useCallback(() => {
     setIsEditing(true);
@@ -227,37 +218,6 @@ export default function LabeledEdge({
                   </button>
                 ),
               )}
-
-              <div className="w-px h-4 bg-gray-200 mx-0.5 shrink-0" />
-
-              {/* Arrow toggles */}
-              <button
-                type="button"
-                title="Arrow at start (from)"
-                onClick={() => toggleArrow("start")}
-                className={[
-                  "h-6 w-6 flex items-center justify-center rounded-md transition-colors",
-                  arrowStart
-                    ? "bg-gray-100 text-gray-900"
-                    : "text-gray-400 hover:bg-gray-50 hover:text-gray-700",
-                ].join(" ")}
-              >
-                <ArrowLeft size={12} />
-              </button>
-
-              <button
-                type="button"
-                title="Arrow at end (to)"
-                onClick={() => toggleArrow("end")}
-                className={[
-                  "h-6 w-6 flex items-center justify-center rounded-md transition-colors",
-                  arrowEnd
-                    ? "bg-gray-100 text-gray-900"
-                    : "text-gray-400 hover:bg-gray-50 hover:text-gray-700",
-                ].join(" ")}
-              >
-                <ArrowRight size={12} />
-              </button>
 
               <div className="w-px h-4 bg-gray-200 mx-0.5 shrink-0" />
 

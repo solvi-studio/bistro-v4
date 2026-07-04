@@ -5,11 +5,11 @@ export interface PlanTask {
   text: string;
   scheduledDate?: string;
   scheduledStartTime?: string; // "HH:MM"
-  scheduledEndTime?: string;   // "HH:MM"
+  scheduledEndTime?: string; // "HH:MM"
   completed: boolean;
   colorTag: "pink" | "blue" | "yellow" | "default";
   phase: PlanPhase;
-  notes?: string[];
+  notes?: string;
   location?: string;
   reminders?: string[];
 }
@@ -22,7 +22,7 @@ export interface CalendarEvent {
   time?: string;
   endTime?: string;
   title: string;
-  notes: string[];
+  notes: string;
   location?: string;
   reminders?: string[];
 }

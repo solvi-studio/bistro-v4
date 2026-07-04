@@ -95,6 +95,10 @@ export default function PlanPageClient() {
     dbSavePlanTasks(scriptId, updated).catch(console.error);
   }
 
+  function handleTaskTextUpdate(taskId: string, text: string) {
+    handleTasksUpdate(tasks.map((t) => (t.id === taskId ? { ...t, text } : t)));
+  }
+
   function handleDateSelect(date: string) {
     setSelectedDate((prev) => (prev === date ? null : date));
   }
@@ -125,15 +129,21 @@ export default function PlanPageClient() {
   return (
     <div
       className="flex flex-col h-full font-(--font-poppins) overflow-hidden"
-      style={{ background: "#FAFAFB" }}
+      style={{
+        background: "#FAFAFB",
+        fontFamily: "var(--font-poppins), Poppins, sans-serif",
+      }}
     >
       {/* Header */}
       <div className="px-8 pt-7 pb-4 shrink-0">
         <div className="flex flex-col items-start">
-          <h1 className="text-2xl font-(--font-display) text-gray-800">
+          <h1
+            className="text-2xl font-(--font-poppins) text-gray-800"
+            style={{ fontWeight: 500 }}
+          >
             Plan your ideas
           </h1>
-          <h2 className="mt-3 text-sm text-gray-500">
+          <h2 className="mt-3 text-sm font-medium text-gray-800">
             {isGenerating
               ? "Generating your plan…"
               : projectName !== "Your Idea"
@@ -171,6 +181,7 @@ export default function PlanPageClient() {
               event={selectedEvent}
               tasks={selectedTasks}
               date={selectedDate}
+              onUpdateTaskText={handleTaskTextUpdate}
             />
           </div>
         </div>

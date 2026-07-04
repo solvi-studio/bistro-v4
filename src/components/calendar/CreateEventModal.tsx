@@ -15,7 +15,7 @@ interface Props {
     input: {
       date: string;
       title: string;
-      notes: string[];
+      notes: string;
       time?: string;
       endTime?: string;
       location?: string;
@@ -53,10 +53,7 @@ export default function CreateEventModal({
     onCreate(scriptId, {
       date,
       title: title.trim(),
-      notes: notes
-        .split("\n")
-        .map((n) => n.trim())
-        .filter(Boolean),
+      notes: notes.trim(),
       time: startTime || undefined,
       endTime: endTime || undefined,
       location: location.trim() || undefined,
@@ -161,7 +158,7 @@ export default function CreateEventModal({
             </label>
 
             <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">
-              Notes (one per line)
+              Notes
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
