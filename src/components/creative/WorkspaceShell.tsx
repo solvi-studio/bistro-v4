@@ -12,7 +12,7 @@ import CreativeHelperSidebar from "./CreativeHelperSidebar";
 export default function WorkspaceShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
-  if (pathname.startsWith("/mind-map") || pathname.startsWith("/calendar")) {
+  if (pathname.startsWith("/brainstorm") || pathname.startsWith("/calendar")) {
     return <main className="min-w-0 flex-1 overflow-hidden">{children}</main>;
   }
 

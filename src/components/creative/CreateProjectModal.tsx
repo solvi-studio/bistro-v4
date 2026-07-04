@@ -84,7 +84,7 @@ export default function CreateProjectModal() {
     try {
       const script = await createIdea(draft);
       clearDraft(folder);
-      router.push(`/mind-map?script=${encodeURIComponent(script.id)}`);
+      router.push(`/brainstorm?script=${encodeURIComponent(script.id)}`);
     } catch (err) {
       console.error("Failed to create idea:", err);
     }
