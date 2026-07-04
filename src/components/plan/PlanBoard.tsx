@@ -120,7 +120,7 @@ export default function PlanBoard({
                   <button
                     type="button"
                     onClick={() => addTask(phase)}
-                    className={`flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed bg-white/40 py-2.5 text-[13px] font-medium transition-colors ${phase.add}`}
+                    className={`flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed bg-white/40 py-2.5 text-[13px] font-light transition-colors ${phase.add}`}
                   >
                     <Plus size={14} />
                     Add New Task
