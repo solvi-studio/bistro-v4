@@ -60,14 +60,6 @@ function sortKey(t: string | null) {
   return t ?? "00:00";
 }
 
-// Auto-grow the task-name textarea up to 5 lines, then scroll internally.
-const TASK_NAME_MAX_LINES = 5;
-function resizeTaskNameTextarea(el: HTMLTextAreaElement) {
-  const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight);
-  el.style.height = "auto";
-  el.style.height = `${Math.min(el.scrollHeight, lineHeight * TASK_NAME_MAX_LINES)}px`;
-}
-
 interface EditableTaskTextProps {
   text: string;
   textCls: string;
@@ -86,10 +78,7 @@ function EditableTaskText({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (isEditing && textareaRef.current) {
-      textareaRef.current.focus();
-      resizeTaskNameTextarea(textareaRef.current);
-    }
+    if (isEditing) textareaRef.current?.focus();
   }, [isEditing]);
 
   function startEditing() {
@@ -108,11 +97,8 @@ function EditableTaskText({
       <textarea
         ref={textareaRef}
         value={draft}
-        rows={1}
-        onChange={(e) => {
-          setDraft(e.target.value);
-          resizeTaskNameTextarea(e.target);
-        }}
+        rows={3}
+        onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
@@ -133,7 +119,7 @@ function EditableTaskText({
         e.stopPropagation();
         startEditing();
       }}
-      className={`text-sm font-normal cursor-text whitespace-pre-wrap break-words ${textCls} ${
+      className={`flex-1 min-w-0 whitespace-pre-wrap break-words text-sm font-normal cursor-text ${textCls} ${
         strikethrough ? "line-through opacity-60" : ""
       }`}
     >
@@ -209,7 +195,7 @@ export default function DayScheduleCard({
   }
 
   return (
-    <div className="flex-1 h-[40vh] rounded-2xl bg-white border border-gray-100 p-8 flex gap-8 overflow-hidden">
+    <div className="flex-1 h-[40vh] rounded-2xl bg-white border border-gray-100 p-4 flex gap-4 overflow-hidden">
       {/* Date display */}
       <div className="self-start shrink-0 flex flex-col gap-0.5 pt-1">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -235,7 +221,7 @@ export default function DayScheduleCard({
               {group.entries.map((entry, ei) => (
                 <div
                   key={entry.taskId ?? ei}
-                  className="flex items-center gap-3"
+                  className="flex items-center gap-3 min-w-0"
                 >
                   <span
                     className={`shrink-0 rounded-lg px-3 py-1 text-xs font-semibold ${entry.pillCls}`}
@@ -253,7 +239,7 @@ export default function DayScheduleCard({
                     />
                   ) : (
                     <span
-                      className={`text-sm font-medium ${entry.textCls} ${entry.strikethrough ? "line-through opacity-60" : ""}`}
+                      className={`flex-1 min-w-0 whitespace-pre-wrap break-words text-sm font-medium ${entry.textCls} ${entry.strikethrough ? "line-through opacity-60" : ""}`}
                     >
                       {entry.text}
                     </span>
