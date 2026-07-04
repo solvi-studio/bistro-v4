@@ -1,0 +1,2 @@
+ALTER TABLE "nextjs_app_schema"."users" ADD COLUMN "video_analysis_count" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "nextjs_app_schema"."users" ADD COLUMN "video_analysis_window_start" timestamp;

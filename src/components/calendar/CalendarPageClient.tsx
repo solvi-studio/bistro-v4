@@ -2,7 +2,11 @@
 
 import { ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getCalendarTaskEvents } from "@/lib/db/actions/calendar";
+import {
+  deleteTaskFromCalendar,
+  getCalendarTaskEvents,
+  updateTaskFromCalendar,
+} from "@/lib/db/actions/calendar";
 import { listIdeas } from "@/lib/db/actions/ideas";
 import type { CreativeScript } from "@/types/creative";
 import type {
@@ -11,8 +15,13 @@ import type {
   EnrichedCalendarEvent,
   PlanPhase,
 } from "@/types/plan";
-import { addEvent, loadEvents, updateEvent } from "@/utils/calendar";
-import { subscribeDataChange } from "@/utils/dataSync";
+import {
+  addEvent,
+  deleteEvent,
+  loadEvents,
+  updateEvent,
+} from "@/utils/calendar";
+import { notifyDataChange, subscribeDataChange } from "@/utils/dataSync";
 import CalendarSidebar from "./CalendarSidebar";
 import CreateEventModal from "./CreateEventModal";
 import {
@@ -123,7 +132,15 @@ export default function CalendarPageClient() {
 
   function handleCreate(
     scriptId: string,
-    input: { date: string; title: string; notes: string[] },
+    input: {
+      date: string;
+      title: string;
+      notes: string[];
+      time?: string;
+      endTime?: string;
+      location?: string;
+      reminders?: string[];
+    },
   ) {
     addEvent(scriptId, input);
     refresh();
@@ -303,8 +320,32 @@ export default function CalendarPageClient() {
           onUpdate={(updated) => {
             // Strip enriched-only fields before persisting
             const { scriptTitle, colorTag, taskId, phase, ...base } = updated;
-            updateEvent(updated.scriptId, base as CalendarEvent);
+            if (taskId) {
+              updateTaskFromCalendar(updated.scriptId, taskId, {
+                text: base.title,
+                scheduledDate: base.date,
+                scheduledStartTime: base.time,
+                scheduledEndTime: base.endTime,
+                notes: base.notes,
+                location: base.location,
+                reminders: base.reminders,
+              })
+                .then(() => notifyDataChange())
+                .catch(console.error);
+            } else {
+              updateEvent(updated.scriptId, base as CalendarEvent);
+            }
             setSelectedEvent(updated);
+          }}
+          onDelete={(target) => {
+            if (target.taskId) {
+              deleteTaskFromCalendar(target.scriptId, target.taskId)
+                .then(() => notifyDataChange())
+                .catch(console.error);
+            } else {
+              deleteEvent(target.scriptId, target.id);
+            }
+            setSelectedEvent(null);
           }}
         />
       )}

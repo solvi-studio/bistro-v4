@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toISO } from "@/components/calendar/dateUtils";
 import {
   getPlanTasks as dbGetPlanTasks,
   savePlanTasks as dbSavePlanTasks,
@@ -26,7 +27,9 @@ export default function PlanPageClient() {
   const [tasks, setTasks] = useState<PlanTask[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [projectName, setProjectName] = useState("Your Idea");
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(() =>
+    toISO(new Date()),
+  );
   const [mounted, setMounted] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
@@ -126,9 +129,9 @@ export default function PlanPageClient() {
     >
       {/* Header */}
       <div className="px-8 pt-7 pb-4 shrink-0">
-        <div className="flex flex-row items-start gap-5">
+        <div className="flex flex-col items-start">
           <h1 className="text-2xl font-(--font-display) text-gray-800">
-            Plan your idea
+            Plan your ideas
           </h1>
           <h2 className="mt-3 text-sm text-gray-500">
             {isGenerating

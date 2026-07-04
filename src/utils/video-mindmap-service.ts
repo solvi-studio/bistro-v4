@@ -5,11 +5,14 @@
 // ("rebounce") shape as summarise-service so a slow/cold backend call can be
 // retried instead of failing outright.
 //
-// Successful results are cached in local storage keyed by
-// (url + sorted types + start offset + end offset). Re-analysing the same
-// inputs reuses the cached result instead of hitting the network again.
+// No result caching here — whether a type needs (re-)analysing is decided by
+// checking the video node's actual connected content nodes on the canvas
+// (see VideoNode's connectedContentHeaders), not by hashing the request.
 
-import { storage } from "@/utils/storage";
+export interface VideoMindmapNode {
+  type: string;
+  content: string;
+}
 
 export interface VideoMindmapNode {
   type: string;
@@ -39,29 +42,6 @@ const MAX_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 1500;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-// ── Result cache (local storage) ────────────────────────────────────────────
-// Cached payload omits nodeId — the same analysis can be reused by any node.
-type CachedResult = Omit<VideoMindmapResult, "nodeId">;
-const CACHE_PREFIX = "bistro_videomindmap_";
-
-// djb2 — keep the storage key short and stable regardless of input length.
-function hash(s: string): string {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
-  return h.toString(36);
-}
-
-function cacheKey(
-  url: string,
-  types: string[],
-  startOffset: number,
-  endOffset: number,
-): string {
-  // Sort types so order differences in the UI don't produce cache misses.
-  const typesKey = [...types].sort().join(",");
-  return `${CACHE_PREFIX}${hash(`${url.trim()}\n${typesKey}\n${startOffset}\n${endOffset}`)}`;
-}
 
 // 4xx (except 408/429) are caller errors — retrying won't help.
 function isRetryable(status: number): boolean {
@@ -123,10 +103,9 @@ async function attempt(
 }
 
 // Analyse a TikTok video into mind-map nodes, one per requested type.
-//   • Returns the cached result for this url+types+offsets when present (no network),
-//     unless `force` is set.
-//   • Otherwise calls the backend, retrying once on transient failures.
-//   • Caches successful results so the same input never re-hits the backend.
+// Always calls the backend (retrying once on transient failures) — the
+// caller is responsible for only requesting types that aren't already
+// represented on the canvas.
 // Throws on permanent failure so the caller can offer a manual retry.
 export async function analyzeVideoMindmap(
   nodeId: string,
@@ -134,28 +113,11 @@ export async function analyzeVideoMindmap(
   types: string[],
   startOffset: number,
   endOffset: number,
-  options: { force?: boolean } = {},
 ): Promise<VideoMindmapResult> {
-  const key = cacheKey(tiktokUrl, types, startOffset, endOffset);
-
-  if (!options.force) {
-    const cached = storage.read<CachedResult | null>(key, null);
-    if (cached) return { nodeId, ...cached };
-  }
-
   let lastErr: unknown;
   for (let n = 1; n <= MAX_ATTEMPTS; n++) {
     try {
-      const result = await attempt(
-        nodeId,
-        tiktokUrl,
-        types,
-        startOffset,
-        endOffset,
-      );
-      const { nodeId: _omit, ...payload } = result;
-      storage.write<CachedResult>(key, payload);
-      return result;
+      return await attempt(nodeId, tiktokUrl, types, startOffset, endOffset);
     } catch (err) {
       lastErr = err;
       const retryable =

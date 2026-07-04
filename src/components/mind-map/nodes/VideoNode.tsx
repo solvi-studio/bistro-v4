@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type Edge,
   Handle,
   type Node,
   type NodeProps,
@@ -14,7 +15,7 @@ import {
   Loader2,
   Sparkles,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   CATEGORY_THEME,
   TYPE_TO_CONTENT,
@@ -58,6 +59,43 @@ const GRID_GAP = 28;
 // Gap between the video node edge and the start of the result grid.
 const ANCHOR_GAP = 64;
 
+// Headers of content nodes already connected to this video node — used to
+// skip re-fetching/re-spawning a type that's already represented on the
+// canvas, whether it was spawned by this video node or manually connected.
+function connectedContentHeaders(
+  videoNodeId: string,
+  allNodes: Node[],
+  allEdges: Edge[],
+): Set<string> {
+  const contentIds = new Set<string>();
+  for (const e of allEdges) {
+    if (e.source === videoNodeId) contentIds.add(e.target);
+    else if (e.target === videoNodeId) contentIds.add(e.source);
+  }
+  const headers = new Set<string>();
+  for (const n of allNodes) {
+    if (n.type === "content" && contentIds.has(n.id)) {
+      headers.add((n.data as ContentNodeData).header);
+    }
+  }
+  return headers;
+}
+
+// Best-effort: pull the first "M:SS"-shaped token out of the backend's
+// free-text "timing" content. The backend is an external service (not in
+// this repo) with an unverified text format, so this must degrade safely.
+const DURATION_TOKEN = /\d{1,2}:\d{2}/;
+
+function dedupeKey(
+  header: string,
+  d: { body?: string; duration?: string },
+): string {
+  if (header === "Timing") {
+    return `${header}::${d.duration ?? "0:10"}`;
+  }
+  return `${header}::${d.body ?? ""}`;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function VideoNode({
@@ -75,6 +113,22 @@ export default function VideoNode({
   );
   const [start, setStart] = useState(data.startOffset ?? 0);
   const [end, setEnd] = useState(data.endOffset ?? 30);
+
+  // A persisted "analyzing" status only ever means the page reloaded (or the
+  // canvas was reopened) mid-request — the in-flight fetch died with the old
+  // page, so there's nothing left to wait for. Reset it once on mount so the
+  // node isn't stuck showing a permanent spinner with no way to retry.
+  // Mount-only: recovers stale persisted state, must not react to status
+  // changes from a real in-session analysis run.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally mount-only
+  useEffect(() => {
+    if (data.status === "analyzing") {
+      updateNodeData(id, {
+        status: "error",
+        note: "Analysis was interrupted by a page reload. Try again.",
+      });
+    }
+  }, []);
 
   const toggleType = useCallback(
     (type: VideoAnalysisType) => {
@@ -104,21 +158,32 @@ export default function VideoNode({
       for (const n of allNodes) {
         if (n.id.startsWith(`vid-${id}-`)) {
           const d = n.data as ContentNodeData;
-          seen.add(`${d.header}::${d.body}`);
+          seen.add(dedupeKey(d.header, d));
         }
       }
 
       // ── Collect valid new nodes ─────────────────────────────────────────────
       type PendingNode = {
         mapping: { category: ContentNodeData["category"]; header: string };
-        body: string;
+        body?: string;
+        duration?: string;
       };
       const pending: PendingNode[] = [];
       for (const { type, content } of result.nodes) {
         const mapping = TYPE_TO_CONTENT[type as VideoAnalysisType];
         if (!mapping) continue; // defensive: unknown type from BE
+
+        if (mapping.header === "Timing") {
+          const match = content.match(DURATION_TOKEN);
+          const duration = match?.[0] ?? "0:10";
+          const key = dedupeKey(mapping.header, { duration });
+          if (seen.has(key)) continue;
+          pending.push({ mapping, duration });
+          continue;
+        }
+
         const body = content.trim();
-        if (!body || seen.has(`${mapping.header}::${body}`)) continue;
+        if (!body || seen.has(dedupeKey(mapping.header, { body }))) continue;
         pending.push({ mapping, body });
       }
 
@@ -184,21 +249,28 @@ export default function VideoNode({
         height: CELL_H,
       });
 
-      pending.forEach(({ mapping, body }, i) => {
+      pending.forEach((p, i) => {
         const pos = positions[i];
         const nodeId = `vid-${id}-${Date.now()}-${spawned}`;
 
-        const nodeData: ContentNodeData = {
-          category: mapping.category,
-          header: mapping.header,
-          body,
-          fontSize: 14,
-          // Store as data so the node auto-measures (no fixed height).
-          // ContentNode uses width as fixed card width and minHeight as the
-          // floor — text can still push the card taller than CELL_H.
-          width: CELL_W,
-          minHeight: CELL_H,
-        };
+        const nodeData: ContentNodeData =
+          p.mapping.header === "Timing"
+            ? {
+                category: p.mapping.category,
+                header: p.mapping.header,
+                duration: p.duration,
+                fontSize: 14,
+                width: CELL_W,
+                minHeight: CELL_H,
+              }
+            : {
+                category: p.mapping.category,
+                header: p.mapping.header,
+                body: p.body,
+                fontSize: 14,
+                width: CELL_W,
+                minHeight: CELL_H,
+              };
 
         addNodes({
           id: nodeId,
@@ -219,7 +291,7 @@ export default function VideoNode({
           markerEnd: EDGE_MARKER,
         });
 
-        seen.add(`${mapping.header}::${body}`);
+        seen.add(dedupeKey(p.mapping.header, p));
         spawned += 1;
       });
 
@@ -259,11 +331,33 @@ export default function VideoNode({
       startOffset: safeStart,
       endOffset: safeEnd,
     });
+
+    // Skip types that already have a connected content node — no need to
+    // re-fetch or re-spawn them.
+    const connectedHeaders = connectedContentHeaders(
+      id,
+      getNodes(),
+      getEdges(),
+    );
+    const typesToFetch = [...selectedTypes].filter((t) => {
+      const mapping = TYPE_TO_CONTENT[t];
+      return mapping && !connectedHeaders.has(mapping.header);
+    });
+
+    if (typesToFetch.length === 0) {
+      updateNodeData(id, {
+        status: "done",
+        note: "These ideas are already on your canvas.",
+        resultCount: 0,
+      });
+      return;
+    }
+
     try {
       const result = await analyzeVideoMindmap(
         id,
         tiktokUrl,
-        [...selectedTypes],
+        typesToFetch,
         safeStart,
         safeEnd,
       );
@@ -282,7 +376,17 @@ export default function VideoNode({
         note: err instanceof Error ? err.message : "Analysis failed.",
       });
     }
-  }, [id, url, selectedTypes, start, end, updateNodeData, spawnResults]);
+  }, [
+    id,
+    url,
+    selectedTypes,
+    start,
+    end,
+    updateNodeData,
+    spawnResults,
+    getNodes,
+    getEdges,
+  ]);
 
   const analyzing = status === "analyzing";
 

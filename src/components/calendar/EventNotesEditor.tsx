@@ -10,6 +10,8 @@ interface Props {
 
 export default function EventNotesEditor({ notes, onChange }: Props) {
   const [draft, setDraft] = useState("");
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState("");
 
   function add() {
     const text = draft.trim();
@@ -22,6 +24,26 @@ export default function EventNotesEditor({ notes, onChange }: Props) {
     onChange(notes.filter((_, idx) => idx !== i));
   }
 
+  function startEdit(i: number) {
+    setEditingIndex(i);
+    setEditDraft(notes[i]);
+  }
+
+  function commitEdit() {
+    if (editingIndex === null) return;
+    const text = editDraft.trim();
+    const next =
+      text.length > 0
+        ? notes.map((n, idx) => (idx === editingIndex ? text : n))
+        : notes.filter((_, idx) => idx !== editingIndex);
+    onChange(next);
+    setEditingIndex(null);
+  }
+
+  function cancelEdit() {
+    setEditingIndex(null);
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <div className="min-h-[7.5rem] rounded-lg border border-dashed border-gray-300 p-3">
@@ -30,9 +52,28 @@ export default function EventNotesEditor({ notes, onChange }: Props) {
             {notes.map((n, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: notes have no stable id
               <li key={i} className="group flex items-start gap-2">
-                <span className="flex-1 text-sm text-gray-700 leading-snug">
-                  {n}
-                </span>
+                {editingIndex === i ? (
+                  <input
+                    // biome-ignore lint/a11y/noAutofocus: user just clicked edit
+                    autoFocus
+                    value={editDraft}
+                    onChange={(e) => setEditDraft(e.target.value)}
+                    onBlur={commitEdit}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitEdit();
+                      if (e.key === "Escape") cancelEdit();
+                    }}
+                    className="flex-1 rounded-md border border-primary/40 px-1.5 py-0.5 text-sm text-gray-700 outline-none focus:border-primary"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => startEdit(i)}
+                    className="flex-1 text-left text-sm text-gray-700 leading-snug hover:text-primary transition-colors"
+                  >
+                    {n}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => remove(i)}
