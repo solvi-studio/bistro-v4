@@ -64,12 +64,10 @@ export default function EventDetailCard({ event, tasks = [], date }: Props) {
               ))}
             </ul>
           )}
-          {event && event.notes.length > 0 && (
-            <ul className="text-[11px] text-amber-800 leading-relaxed space-y-1 list-disc list-inside">
-              {event.notes.map((note) => (
-                <li key={note}>{note}</li>
-              ))}
-            </ul>
+          {event?.notes && (
+            <p className="text-[11px] text-amber-800 leading-relaxed">
+              {event.notes}
+            </p>
           )}
         </div>
       ) : (

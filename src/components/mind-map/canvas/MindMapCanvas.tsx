@@ -1,5 +1,6 @@
 "use client";
 
+import { useUser } from "@clerk/nextjs";
 import {
   addEdge,
   Background,
@@ -30,6 +31,7 @@ import { loadCanvas, saveCanvas } from "@/lib/db/actions/mindmap";
 import { pickHandles } from "@/utils/mind-map-handles";
 import { placeNode, rectOf } from "@/utils/mind-map-layout";
 import { exportMindMapGraph } from "@/utils/mindmap-export";
+import { recordFolderOpened } from "@/utils/recentFolder";
 import { submitMindMap } from "@/utils/summarise-service";
 import "@xyflow/react/dist/style.css";
 
@@ -130,6 +132,8 @@ function CanvasInner() {
   const router = useRouter();
   const params = useSearchParams();
   const mapId = params.get("script") ?? "default";
+  const { user } = useUser();
+  const userId = user?.id;
 
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
@@ -137,6 +141,7 @@ function CanvasInner() {
   const restored = useRef(false);
   useEffect(() => {
     restored.current = false;
+    if (userId) recordFolderOpened(userId, mapId);
     loadCanvas(mapId)
       .then((saved) => {
         if (saved) {
@@ -150,7 +155,7 @@ function CanvasInner() {
       .finally(() => {
         restored.current = true;
       });
-  }, [mapId, setNodes, setEdges, setViewport]);
+  }, [mapId, userId, setNodes, setEdges, setViewport]);
 
   // Debounced autosave (fire-and-forget — DB write)
   useEffect(() => {
@@ -232,7 +237,7 @@ function CanvasInner() {
 
   const onConnect: OnConnect = useCallback(
     (connection) => {
-      if (activeTool !== "connector") return;
+      if (activeTool !== "connector" && activeTool !== "select") return;
 
       const ns = getNodes();
       let src = ns.find((n) => n.id === connection.source);
@@ -425,7 +430,7 @@ function CanvasInner() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         nodesDraggable={isSelectTool}
-        nodesConnectable={activeTool === "connector"}
+        nodesConnectable={activeTool === "connector" || isSelectTool}
         elementsSelectable={isSelectTool}
         panOnDrag={isSelectTool || activeTool === "connector"}
         selectionOnDrag={isSelectTool}

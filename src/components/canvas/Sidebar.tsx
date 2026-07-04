@@ -1,11 +1,14 @@
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useUser } from "@clerk/nextjs";
 import { CalendarDays, Home, Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { listIdeas } from "@/lib/db/actions/ideas";
+import { useEffect, useRef, useState } from "react";
+import {
+  clearLastOpenedFolder,
+  getLastOpenedFolder,
+} from "@/utils/recentFolder";
 
 const TOP_NAV = [
   { Icon: Home, label: "Home", href: "/creative" },
@@ -18,19 +21,32 @@ const TOP_NAV = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user, isSignedIn, isLoaded } = useUser();
 
   const [ideasHref, setIdeasHref] = useState("/creative");
+  // Tracks whose folder-history is currently loaded so a sign-out can wipe
+  // that account's entry — recentFolder.ts also namespaces by user id, so
+  // a different user signing in on this browser never reads someone else's.
+  const lastUserId = useRef<string | null>(null);
+
   useEffect(() => {
-    listIdeas()
-      .then((scripts) => {
-        if (scripts.length === 0) return;
-        const latest = scripts.reduce((a, b) =>
-          a.createdAt >= b.createdAt ? a : b,
-        );
-        setIdeasHref(`/brainstorm?script=${encodeURIComponent(latest.id)}`);
-      })
-      .catch(console.error);
-  }, []);
+    if (!isLoaded) return;
+
+    if (isSignedIn && user?.id) {
+      lastUserId.current = user.id;
+      const recent = getLastOpenedFolder(user.id);
+      if (recent) {
+        setIdeasHref(`/brainstorm?script=${encodeURIComponent(recent)}`);
+      }
+      return;
+    }
+
+    if (lastUserId.current) {
+      clearLastOpenedFolder(lastUserId.current);
+      lastUserId.current = null;
+    }
+    setIdeasHref("/creative");
+  }, [isLoaded, isSignedIn, user?.id]);
 
   const cls = (active: boolean) =>
     `grid h-11 w-11 place-items-center rounded-xl transition-colors ${
@@ -47,7 +63,7 @@ export default function Sidebar() {
         <Home className="h-6 w-6 text-[#3b7cf4]" strokeWidth={2} />
       </Link>
 
-      {/* Ideas — jumps straight into the most recently edited mind map. */}
+      {/* Ideas — jumps straight into the most recently opened mind map. */}
       <Link
         href={ideasHref}
         aria-label="Ideas"

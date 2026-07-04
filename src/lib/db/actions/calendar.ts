@@ -36,7 +36,7 @@ export async function getCalendarTaskEvents(): Promise<
         time: t.scheduledStartTime,
         endTime: t.scheduledEndTime,
         title: t.text,
-        notes: t.notes ?? [],
+        notes: t.notes ?? "",
         location: t.location,
         reminders: t.reminders,
         scriptTitle: row.name ?? "",
