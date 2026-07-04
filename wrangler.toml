@@ -15,5 +15,5 @@ enabled = true
 invocation_logs = true
 
 [route]
-pattern = "cf-workers.solvi.studio/*"
+pattern = "cf-workers.solvi.studio"
 custom_domain = true
