@@ -32,7 +32,7 @@ React Flow canvas for building scene-based TikTok content plans. Sits at `/mind-
 
 ### VideoNode (RF type key `"videoDrop"`)
 - Component renamed from `VideoDropNode` but **RF type key stays `"videoDrop"`** so saved canvases load correctly.
-- Analysis results spawn themed `content` nodes typed by the 7 BE analysis types (`scene_description`, `shooting_style` → visual; `voiceover`, `music`, `sound_effect` → audio; `concept_writing`, `timing` → script). Mapping lives in `TYPE_TO_CONTENT` in `constants/topics.ts`.
+- Analysis results spawn themed `content` nodes typed by the 6 BE analysis types (`scene_description`, `shooting_style` → visual; `voiceover`, `music`, `sound_effect` → audio; `concept_writing` → script). Mapping lives in `TYPE_TO_CONTENT` in `constants/topics.ts`.
 - De-dupes by `header::body` key against nodes prefixed `vid-{id}-`.
 
 ---

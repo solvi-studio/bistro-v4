@@ -81,18 +81,7 @@ function connectedContentHeaders(
   return headers;
 }
 
-// Best-effort: pull the first "M:SS"-shaped token out of the backend's
-// free-text "timing" content. The backend is an external service (not in
-// this repo) with an unverified text format, so this must degrade safely.
-const DURATION_TOKEN = /\d{1,2}:\d{2}/;
-
-function dedupeKey(
-  header: string,
-  d: { body?: string; duration?: string },
-): string {
-  if (header === "Timing") {
-    return `${header}::${d.duration ?? "0:10"}`;
-  }
+function dedupeKey(header: string, d: { body?: string }): string {
   return `${header}::${d.body ?? ""}`;
 }
 
@@ -166,21 +155,11 @@ export default function VideoNode({
       type PendingNode = {
         mapping: { category: ContentNodeData["category"]; header: string };
         body?: string;
-        duration?: string;
       };
       const pending: PendingNode[] = [];
       for (const { type, content } of result.nodes) {
         const mapping = TYPE_TO_CONTENT[type as VideoAnalysisType];
         if (!mapping) continue; // defensive: unknown type from BE
-
-        if (mapping.header === "Timing") {
-          const match = content.match(DURATION_TOKEN);
-          const duration = match?.[0] ?? "0:10";
-          const key = dedupeKey(mapping.header, { duration });
-          if (seen.has(key)) continue;
-          pending.push({ mapping, duration });
-          continue;
-        }
 
         const body = content.trim();
         if (!body || seen.has(dedupeKey(mapping.header, { body }))) continue;
@@ -253,24 +232,14 @@ export default function VideoNode({
         const pos = positions[i];
         const nodeId = `vid-${id}-${Date.now()}-${spawned}`;
 
-        const nodeData: ContentNodeData =
-          p.mapping.header === "Timing"
-            ? {
-                category: p.mapping.category,
-                header: p.mapping.header,
-                duration: p.duration,
-                fontSize: 14,
-                width: CELL_W,
-                minHeight: CELL_H,
-              }
-            : {
-                category: p.mapping.category,
-                header: p.mapping.header,
-                body: p.body,
-                fontSize: 14,
-                width: CELL_W,
-                minHeight: CELL_H,
-              };
+        const nodeData: ContentNodeData = {
+          category: p.mapping.category,
+          header: p.mapping.header,
+          body: p.body,
+          fontSize: 14,
+          width: CELL_W,
+          minHeight: CELL_H,
+        };
 
         addNodes({
           id: nodeId,
