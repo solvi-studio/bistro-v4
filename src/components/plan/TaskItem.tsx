@@ -173,14 +173,14 @@ export default function TaskItem({
                   }
                   if (e.key === "Escape") setEditing(false);
                 }}
-                className={`w-full resize-none bg-transparent text-[13px] font-medium leading-snug outline-none ${accentCls ?? "text-gray-700"}`}
+                className={`w-full resize-none bg-transparent text-[13px] font-light leading-snug outline-none ${accentCls ?? "text-gray-700"}`}
               />
             ) : (
               <button
                 type="button"
                 onClick={startEdit}
                 title="Click to edit"
-                className={`line-clamp-2 w-full text-left text-[13px] font-medium ${accentCls ?? "text-gray-700"}`}
+                className={`line-clamp-2 w-full text-left text-[13px] font-light ${accentCls ?? "text-gray-700"}`}
               >
                 {task.text}
               </button>
