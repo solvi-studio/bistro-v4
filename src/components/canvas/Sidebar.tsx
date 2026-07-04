@@ -27,7 +27,7 @@ export default function Sidebar() {
         const latest = scripts.reduce((a, b) =>
           a.createdAt >= b.createdAt ? a : b,
         );
-        setIdeasHref(`/mind-map?script=${encodeURIComponent(latest.id)}`);
+        setIdeasHref(`/brainstorm?script=${encodeURIComponent(latest.id)}`);
       })
       .catch(console.error);
   }, []);
@@ -51,7 +51,7 @@ export default function Sidebar() {
       <Link
         href={ideasHref}
         aria-label="Ideas"
-        className={cls(pathname.startsWith("/mind-map"))}
+        className={cls(pathname.startsWith("/brainstorm"))}
       >
         <Lightbulb className="h-6 w-6 text-[#3b7cf4]" strokeWidth={2} />
       </Link>
