@@ -15,6 +15,11 @@ export async function getClerkProxyConfig() {
     return { proxyUrl: 'https://test.solvi.studio' + clerkProxyEndpoint };
   }
 
-  // 3. Fallback to production for everything else (including Vercel production domains)
+  // 3. Dedicated Cloudflare Workers Routing Check
+  if (host.includes('cf-workers')) {
+    return { proxyUrl: 'https://cf-workers.solvi.studio' + clerkProxyEndpoint };
+  }
+
+  // 4. Fallback to production for everything else (including Vercel production domains)
   return { proxyUrl: 'https://solvi.studio' + clerkProxyEndpoint };
 }
