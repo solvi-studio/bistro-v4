@@ -20,7 +20,7 @@ function nodeContent(node: Node): string {
   if (node.type === "content") {
     const d = node.data as ContentNodeData;
     if (d.header === "Timing") {
-      return `Timing: ${d.duration ?? "0:10"}`;
+      return `Timing: ${d.duration ?? "0:00"}`;
     }
     // header + body so AI gets full context
     return [d.header, d.body].filter(Boolean).join(": ");
@@ -180,7 +180,7 @@ async function buildMindMapGraph(
         // Content nodes group by their header as the hub label
         const d = target.data as ContentNodeData;
         if (d.header === "Timing") {
-          topics.push({ hubLabel: d.header, items: [d.duration ?? "0:10"] });
+          topics.push({ hubLabel: d.header, items: [d.duration ?? "0:00"] });
         } else {
           const body = d.body?.trim();
           if (body) {
