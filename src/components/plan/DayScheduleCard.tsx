@@ -150,7 +150,7 @@ export default function DayScheduleCard({
 }: Props) {
   if (!date) {
     return (
-      <div className="flex-1 min-h-40 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-sm text-gray-400">
+      <div className="flex-1 h-[40vh] rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-sm text-gray-400">
         Select a day to see details
       </div>
     );
@@ -209,9 +209,9 @@ export default function DayScheduleCard({
   }
 
   return (
-    <div className="flex-1 min-h-80  max-h-[40vh] rounded-2xl bg-white border border-gray-100 p-8 flex gap-8 items-start">
+    <div className="flex-1 h-[40vh] rounded-2xl bg-white border border-gray-100 p-8 flex gap-8 overflow-hidden">
       {/* Date display */}
-      <div className="shrink-0 flex flex-col gap-0.5 pt-1">
+      <div className="self-start shrink-0 flex flex-col gap-0.5 pt-1">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
           Date
         </p>
@@ -222,7 +222,7 @@ export default function DayScheduleCard({
       <div className="w-px self-stretch bg-gray-100 shrink-0" />
 
       {/* Timeline */}
-      <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-y-auto max-h-96">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-4 overflow-y-auto">
         {hasContent ? (
           groups.map((group, gi) => (
             <div key={gi} className="flex flex-col gap-2">
