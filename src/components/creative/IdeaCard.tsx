@@ -22,7 +22,7 @@ export default function IdeaCard({ script }: Props) {
     <button
       type="button"
       onClick={() =>
-        router.push(`/mind-map?script=${encodeURIComponent(script.id)}`)
+        router.push(`/brainstorm?script=${encodeURIComponent(script.id)}`)
       }
       className="flex aspect-square w-full flex-col rounded-[22px] p-5 text-left transition-transform hover:-translate-y-1 sm:aspect-auto sm:h-53.75 sm:w-full sm:p-6"
       style={{ backgroundColor: bg }}

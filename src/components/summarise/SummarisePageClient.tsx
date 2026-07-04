@@ -27,7 +27,7 @@ export default function SummarisePageClient() {
       .then((result) => {
         if (cancelled) return;
         if (result === null) {
-          router.replace(`/mind-map${scriptQuery}`);
+          router.replace(`/brainstorm${scriptQuery}`);
           return;
         }
         setData(result);
@@ -92,7 +92,7 @@ export default function SummarisePageClient() {
             )}
             <button
               type="button"
-              onClick={() => router.push(`/mind-map${scriptQuery}`)}
+              onClick={() => router.push(`/brainstorm${scriptQuery}`)}
               className="mt-6 px-6 py-2.5 rounded-full bg-primary text-white text-sm hover:bg-(--color-primary-hover) transition-colors"
               style={{ fontWeight: 600 }}
             >

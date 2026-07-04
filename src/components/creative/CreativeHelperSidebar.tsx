@@ -52,7 +52,7 @@ interface Step {
 
 const STEPS: Step[] = [
   {
-    href: "/mind-map",
+    href: "/brainstorm",
     icon: Brain,
     label: "Brainstorm",
     bg: "#f8dadb",
