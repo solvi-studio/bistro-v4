@@ -102,7 +102,7 @@ export const MIND_MAP_GROUPS: MindMapGroup[] = [
     category: "script",
     sections: [
       {
-        items: ["Concept Writing", "Timing"],
+        items: ["Script writing", "Timing"],
         allowAdd: true,
       },
     ],
@@ -154,7 +154,7 @@ export const VIDEO_ANALYSIS_TYPES: ReadonlyArray<{
   {
     category: "script",
     label: "Script",
-    types: [{ value: "concept_writing", label: "Concept Writing" }],
+    types: [{ value: "concept_writing", label: "Script writing" }],
   },
 ] as const;
 

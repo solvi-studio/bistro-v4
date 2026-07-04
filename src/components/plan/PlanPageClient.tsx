@@ -165,11 +165,11 @@ export default function PlanPageClient() {
         </div>
 
         {/* Calendar card */}
-        <div className="shrink-0 rounded-2xl bg-white shadow-sm p-6">
+        <div className="shrink-0 rounded-2xl bg-white shadow-sm p-6 ">
           <h3 className="text-sm font-semibold text-gray-700 mb-4">
             Execution Calendar
           </h3>
-          <div className="flex gap-4 items-start">
+          <div className="flex gap-4 items-start h-[40vh] overflow-hidden">
             <div className="flex-1 min-w-0">
               <ExecutionCalendar
                 markedDates={markedDates}

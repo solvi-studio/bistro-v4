@@ -121,7 +121,7 @@ function EditableTaskText({
           }
           if (e.key === "Escape") setIsEditing(false);
         }}
-        className={`flex-1 min-w-4w0 resize-none overflow-y-auto rounded-lg border border-primary/40 px-3 py-2 text-base font-medium leading-snug outline-none focus:border-primary ${textCls}`}
+        className={`flex-1 min-w-40 resize-none overflow-y-auto rounded-lg border border-primary/40 px-3 py-2 text-sm font-normal leading-snug outline-none focus:border-primary ${textCls}`}
       />
     );
   }
@@ -133,7 +133,7 @@ function EditableTaskText({
         e.stopPropagation();
         startEditing();
       }}
-      className={`text-sm font-medium cursor-text whitespace-pre-wrap break-words ${textCls} ${
+      className={`text-sm font-normal cursor-text whitespace-pre-wrap break-words ${textCls} ${
         strikethrough ? "line-through opacity-60" : ""
       }`}
     >
@@ -150,7 +150,7 @@ export default function DayScheduleCard({
 }: Props) {
   if (!date) {
     return (
-      <div className="flex-1 min-h-80 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-sm text-gray-400">
+      <div className="flex-1 min-h-40 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-sm text-gray-400">
         Select a day to see details
       </div>
     );
@@ -209,7 +209,7 @@ export default function DayScheduleCard({
   }
 
   return (
-    <div className="flex-1 min-h-80 rounded-2xl bg-white border border-gray-100 p-8 flex gap-8 items-start">
+    <div className="flex-1 min-h-80  max-h-[40vh] rounded-2xl bg-white border border-gray-100 p-8 flex gap-8 items-start">
       {/* Date display */}
       <div className="shrink-0 flex flex-col gap-0.5 pt-1">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
