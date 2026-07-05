@@ -18,10 +18,19 @@ export interface NodeBox {
   measured?: { width?: number; height?: number };
 }
 
-function centerOf(node: NodeBox): { x: number; y: number } {
+export function centerOf(node: NodeBox): { x: number; y: number } {
   const w = node.width ?? node.measured?.width ?? 0;
   const h = node.height ?? node.measured?.height ?? 0;
   return { x: node.position.x + w / 2, y: node.position.y + h / 2 };
+}
+
+// Measured size of a node (0 when React Flow hasn't measured it yet — the
+// caller applies its own fallback). Mirrors centerOf's source precedence.
+export function sizeOf(node: NodeBox): { w: number; h: number } {
+  return {
+    w: node.width ?? node.measured?.width ?? 0,
+    h: node.height ?? node.measured?.height ?? 0,
+  };
 }
 
 export interface PickedHandles {

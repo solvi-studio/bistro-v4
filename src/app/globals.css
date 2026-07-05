@@ -62,9 +62,25 @@ body {
   outline: none;
 }
 
-/* Mind-map: node currently under a dragged node (hover-to-connect target). */
-.react-flow__node.mm-drop-target {
-  outline: 2px dashed var(--color-primary);
-  outline-offset: 3px;
-  border-radius: 14px;
+/* Mind-map scene-connect zone: pulsing dashed box (spec sc-pulse-ring). */
+@keyframes sc-pulse-ring {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+/* Mind-map scene-connect label bob (spec sc-label-float). Keeps the -50% x-center.
+   Bob distance in vmin to stay responsive (≈ spec 5px). */
+@keyframes sc-label-float {
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+  }
+  50% {
+    transform: translate(-50%, -0.6vmin);
+  }
 }
