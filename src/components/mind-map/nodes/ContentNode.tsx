@@ -7,6 +7,7 @@ import {
   NodeToolbar,
   Position,
   useReactFlow,
+  useUpdateNodeInternals,
 } from "@xyflow/react";
 import { Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -88,6 +89,7 @@ export default function ContentNode({
   selected,
 }: NodeProps<ContentNodeType>) {
   const { updateNodeData, deleteElements, getViewport } = useReactFlow();
+  const updateNodeInternals = useUpdateNodeInternals();
   const theme = CATEGORY_THEME[data.category];
   const isTimingNode = data.header === "Timing";
 
@@ -178,6 +180,12 @@ export default function ContentNode({
           Math.max(MIN_H, startH + (me.clientY - startY) / zoom),
         );
         updateNodeData(id, { width: newW, minHeight: newH });
+        // data.width/minHeight drives the card's inline style, but React
+        // Flow's `measured` (what edges use to route themselves) only
+        // updates via a passive, async ResizeObserver otherwise — leaving
+        // edges pinned to the pre-resize box for one or more frames. Force
+        // it to refresh in lockstep with the drag.
+        updateNodeInternals(id);
       };
 
       const onUp = () => {
@@ -188,7 +196,7 @@ export default function ContentNode({
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
     },
-    [id, updateNodeData, getViewport],
+    [id, updateNodeData, updateNodeInternals, getViewport],
   );
 
   const cardWidth = data.width ?? DEFAULT_W;
@@ -288,11 +296,11 @@ export default function ContentNode({
             ) : (
               <button
                 type="button"
-                onClick={() => startEditingDuration(data.duration ?? "0:10")}
+                onClick={() => startEditingDuration(data.duration ?? "0:00")}
                 style={{ fontSize: data.fontSize ?? 14, color: theme.bodyText }}
                 className="hover:opacity-70 transition-opacity"
               >
-                {data.duration ?? "0:10"}
+                {data.duration ?? "0:00"}
               </button>
             )}
             {/* Display-only unit hint — never part of the stored value or any export. */}

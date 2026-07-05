@@ -32,7 +32,7 @@ React Flow canvas for building scene-based TikTok content plans. Sits at `/mind-
 
 ### VideoNode (RF type key `"videoDrop"`)
 - Component renamed from `VideoDropNode` but **RF type key stays `"videoDrop"`** so saved canvases load correctly.
-- Analysis results spawn themed `content` nodes typed by the 7 BE analysis types (`scene_description`, `shooting_style` → visual; `voiceover`, `music`, `sound_effect` → audio; `concept_writing`, `timing` → script). Mapping lives in `TYPE_TO_CONTENT` in `constants/topics.ts`.
+- Analysis results spawn themed `content` nodes typed by the 6 BE analysis types (`scene_description`, `shooting_style` → visual; `voiceover`, `music`, `sound_effect` → audio; `concept_writing` → script). Mapping lives in `TYPE_TO_CONTENT` in `constants/topics.ts`.
 - De-dupes by `header::body` key against nodes prefixed `vid-{id}-`.
 
 ---
@@ -56,14 +56,19 @@ React Flow canvas for building scene-based TikTok content plans. Sits at `/mind-
 1. **scene→scene**: `sceneEdge`. **Linear only** — each scene has at most 1 successor and 1 predecessor. Enforced in:
    - `SceneNode.addScene()` — won't add if node already has outgoing sceneEdge
    - `MindMapCanvas.onConnect()` — rejects if chain would branch
-   - `useNodeDragConnect.onNodeDragStop()` — `wouldBreakChain()` guard
+
+   Dragging one scene onto another (or onto content/video) creates **no** edge — scene drags are pure repositioning (spec §Drag behavior). Scene chaining only happens via the "+" toolbar or the connector tool.
 
 2. **scene→content/video**: `labeled` edge, arrow always points **outward from scene**. Source is always the scene regardless of drag direction. Enforced in:
    - `SceneNode.addContentNode()` / `addVideoAnalysis()` — hardcoded direction
    - `MindMapCanvas.onConnect()` — swaps if scene is target
    - `useNodeDragConnect` — `normalizeSceneEdge()` swaps to scene-as-source
 
-3. **content/video↔content/video**: `labeled` edge, direction follows drag. No extra constraints.
+   **Drag-to-link proximity model** (`useNodeDragConnect` + `utils/sceneProximity.ts`): perimeters are **proportional to each scene's measured size**, not fixed pixels — `sceneRadius = ½ · (scene's bounding-box diagonal)`, scaled by `DETECT_MULT` (3.25) for the outer guidance perimeter and `CONNECT_MULT` (1.5) for the inner link perimeter. While dragging a `content`/`videoDrop` node, the nearest scene whose detect perimeter contains the block shows the connect-zone overlay (`canvas/SceneConnectionOverlay.tsx` — dashed box + "Drop to connect to Scene N" label + proximity glow tinted to the block's color); the visible box footprint tracks that scene's connect perimeter diameter, so it grows/shrinks as the scene is resized. The block links on drop if **any corner** of its bounding box (not just its center) falls within the connect radius — more sensitive for large or off-center drags; outside that it's guidance-only.
+
+   The legacy bounding-box-intersection body-overlap drag-connect mechanism (`.mm-drop-target` outline, `getIntersectingNodes`) has been **removed entirely**, for every node type — this proximity model is now the only drag-based way to link content/video to a scene.
+
+3. **content/video↔content/video**: `labeled` edge, direction follows drag via the connector tool (handle-drag) — body-overlap dragging no longer links anything. **Content nodes cannot connect to other content nodes** — enforced in `MindMapCanvas.isValidConnection` (rejects a connection when both endpoints are type `content`). Video nodes are unrestricted: video↔video and content↔video connect normally.
 
 ---
 
@@ -97,7 +102,8 @@ Renders groups from `MIND_MAP_GROUPS` where `!fromScript`. Groups with `category
 
 | File | Purpose |
 |---|---|
-| `utils/mind-map-handles.ts` | `pickHandles(src, tgt)` — returns closest facing `sourceHandle`/`targetHandle` based on node centers. Used by edges (live) and drag-connect. |
+| `utils/mind-map-handles.ts` | `pickHandles(src, tgt)` — returns closest facing `sourceHandle`/`targetHandle` based on node centers. Used by edges (live) and drag-connect. `centerOf(node)` / `sizeOf(node)` — node center/size, reused by proximity math. |
+| `utils/sceneProximity.ts` | `sceneRadius(w, h)` — per-scene base perimeter (½ diagonal); `DETECT_MULT` (3.25) / `CONNECT_MULT` (1.7) scale it into the two perimeters. `activeSceneZone(blockCenter, scenes)` — nearest scene within its own detect radius + Voronoi-relative eased `glow` (0..1) + that scene's `connectRadius`. Drives `canvas/SceneConnectionOverlay.tsx` and the drop-linking check in `useNodeDragConnect`. |
 | `utils/mind-map-store.ts` | `loadCanvas(mapId)` / `saveCanvas(mapId, {nodes, edges, viewport})` — localStorage keyed by script id or `"default"`. |
 | `utils/mindmap-export.ts` | `exportMindMapGraph()` — walks scene chain order, groups content nodes under scenes. Content nodes export as `header: body`. |
 | `utils/mind-map-layout.ts` | Collision-free placement. `rectOf(node)` → bounding box (reads `measured → node.width/height → data.width/minHeight → defaults`). `placeNode(occupied, x, y, dir, w, h)` — one-shot free-slot finder + registers rect. `distributeGrid(...)` — batch 2-column grid for video results. `findFreePosition(...)` — underlying spiral search (10 cols × 24 rows, GAP=28). |

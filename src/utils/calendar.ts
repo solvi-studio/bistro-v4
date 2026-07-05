@@ -29,7 +29,7 @@ export function addEvent(
   input: {
     date: string;
     title: string;
-    notes?: string[];
+    notes?: string;
     time?: string;
     endTime?: string;
     location?: string;
@@ -43,7 +43,7 @@ export function addEvent(
     time: input.time,
     endTime: input.endTime,
     title: input.title,
-    notes: input.notes ?? [],
+    notes: input.notes ?? "",
     location: input.location,
     reminders: input.reminders,
   };

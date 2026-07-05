@@ -1,5 +1,6 @@
 "use client";
 
+import { useUser } from "@clerk/nextjs";
 import {
   addEdge,
   Background,
@@ -30,6 +31,7 @@ import { loadCanvas, saveCanvas } from "@/lib/db/actions/mindmap";
 import { pickHandles } from "@/utils/mind-map-handles";
 import { placeNode, rectOf } from "@/utils/mind-map-layout";
 import { exportMindMapGraph } from "@/utils/mindmap-export";
+import { recordFolderOpened } from "@/utils/recentFolder";
 import { submitMindMap } from "@/utils/summarise-service";
 import "@xyflow/react/dist/style.css";
 
@@ -37,6 +39,7 @@ import CreativeHelperSidebar from "@/components/creative/CreativeHelperSidebar";
 import { EraserCursor } from "@/components/mind-map/canvas/EraserCursor";
 import MindMapSidePanel from "@/components/mind-map/canvas/MindMapSidePanel";
 import ResizableSplit from "@/components/mind-map/canvas/ResizableSplit";
+import SceneConnectionOverlay from "@/components/mind-map/canvas/SceneConnectionOverlay";
 import {
   INITIAL_EDGES,
   INITIAL_NODES,
@@ -130,6 +133,8 @@ function CanvasInner() {
   const router = useRouter();
   const params = useSearchParams();
   const mapId = params.get("script") ?? "default";
+  const { user } = useUser();
+  const userId = user?.id;
 
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
@@ -137,6 +142,7 @@ function CanvasInner() {
   const restored = useRef(false);
   useEffect(() => {
     restored.current = false;
+    if (userId) recordFolderOpened(userId, mapId);
     loadCanvas(mapId)
       .then((saved) => {
         if (saved) {
@@ -150,7 +156,7 @@ function CanvasInner() {
       .finally(() => {
         restored.current = true;
       });
-  }, [mapId, setNodes, setEdges, setViewport]);
+  }, [mapId, userId, setNodes, setEdges, setViewport]);
 
   // Debounced autosave (fire-and-forget — DB write)
   useEffect(() => {
@@ -225,14 +231,20 @@ function CanvasInner() {
       );
       if (existingEdge) return false;
 
+      // Content nodes cannot connect to other content nodes (video is unrestricted).
+      const ns = getNodes();
+      const src = ns.find((n) => n.id === connection.source);
+      const tgt = ns.find((n) => n.id === connection.target);
+      if (src?.type === "content" && tgt?.type === "content") return false;
+
       return true;
     },
-    [getEdges],
+    [getEdges, getNodes],
   );
 
   const onConnect: OnConnect = useCallback(
     (connection) => {
-      if (activeTool !== "connector") return;
+      if (activeTool !== "connector" && activeTool !== "select") return;
 
       const ns = getNodes();
       let src = ns.find((n) => n.id === connection.source);
@@ -283,7 +295,9 @@ function CanvasInner() {
   );
 
   // ── Drag-to-link ──────────────────────────────────────────────────────────
-  const { onNodeDrag, onNodeDragStop } = useNodeDragConnect({ setEdges });
+  const { onNodeDrag, onNodeDragStop, proximity } = useNodeDragConnect({
+    setEdges,
+  });
 
   // ── Manual save ───────────────────────────────────────────────────────────
   const [savedFlash, setSavedFlash] = useState(false);
@@ -425,7 +439,7 @@ function CanvasInner() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         nodesDraggable={isSelectTool}
-        nodesConnectable={activeTool === "connector"}
+        nodesConnectable={activeTool === "connector" || isSelectTool}
         elementsSelectable={isSelectTool}
         panOnDrag={isSelectTool || activeTool === "connector"}
         selectionOnDrag={isSelectTool}
@@ -443,6 +457,7 @@ function CanvasInner() {
           size={1.5}
           color="#e5e7eb"
         />
+        <SceneConnectionOverlay proximity={proximity} />
         <Controls
           className="border! border-gray-200! shadow-sm! rounded-xl! overflow-hidden"
           showInteractive={false}

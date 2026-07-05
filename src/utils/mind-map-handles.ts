@@ -16,12 +16,41 @@ export interface NodeBox {
   width?: number | null;
   height?: number | null;
   measured?: { width?: number; height?: number };
+  /** Content nodes persist a user-resized width/height floor here (see
+   * ContentNode.tsx's corner-drag handler) — measured/width can lag a resize
+   * by a frame or more, so this must be checked as a fallback. */
+  data?: { width?: unknown; minHeight?: unknown };
 }
 
-function centerOf(node: NodeBox): { x: number; y: number } {
-  const w = node.width ?? node.measured?.width ?? 0;
-  const h = node.height ?? node.measured?.height ?? 0;
+// Same precedence as utils/mind-map-layout.ts's nodeSize() — the codebase's
+// single source of truth for node sizing — kept in sync with it deliberately:
+// measured → node.width/height → data.width/minHeight → 0 (caller's fallback).
+function resolveSize(node: NodeBox): { w: number; h: number } {
+  const data = node.data ?? {};
+  return {
+    w:
+      node.measured?.width ??
+      node.width ??
+      (typeof data.width === "number" ? data.width : undefined) ??
+      0,
+    h:
+      node.measured?.height ??
+      node.height ??
+      (typeof data.minHeight === "number" ? data.minHeight : undefined) ??
+      0,
+  };
+}
+
+export function centerOf(node: NodeBox): { x: number; y: number } {
+  const { w, h } = resolveSize(node);
   return { x: node.position.x + w / 2, y: node.position.y + h / 2 };
+}
+
+// Measured size of a node (0 when nothing — measured, width/height, or
+// data.width/minHeight — is available yet; the caller applies its own
+// type-specific fallback).
+export function sizeOf(node: NodeBox): { w: number; h: number } {
+  return resolveSize(node);
 }
 
 export interface PickedHandles {
