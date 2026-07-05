@@ -31,22 +31,19 @@ export interface Rect {
   h: number;
 }
 
-// True if ANY part of rect (edge, corner, or interior) touches the circle —
-// full rectangle-circle intersection, not just corners. A corner-only check
-// misses cases like a wide/short node whose edge passes through the circle
-// near its midpoint while all 4 corners stay outside. Standard technique:
-// clamp the circle's center to the rect's bounds to get the closest point on
-// (or inside) the rect, then compare that point's distance to the radius.
-export function rectTouchesCircle(
-  rect: Rect,
-  center: Pt,
-  radius: number,
-): boolean {
+// Distance from point to the nearest point on/in rect (0 when point is inside
+// rect). Standard technique: clamp the point into the rect's bounds, then
+// measure distance to that clamped point. Used as the *detection* metric
+// itself (not just the final link check) — a rect's edge can be well inside a
+// perimeter while its center point is still outside it (e.g. a wide node), so
+// every distance calc against a dragged node must use its full box, not its
+// center point alone.
+export function rectDistance(rect: Rect, point: Pt): number {
   const closest: Pt = {
-    x: Math.min(Math.max(center.x, rect.x), rect.x + rect.w),
-    y: Math.min(Math.max(center.y, rect.y), rect.y + rect.h),
+    x: Math.min(Math.max(point.x, rect.x), rect.x + rect.w),
+    y: Math.min(Math.max(point.y, rect.y), rect.y + rect.h),
   };
-  return distance(closest, center) <= radius;
+  return distance(closest, point);
 }
 
 export interface SceneRef {
@@ -63,22 +60,25 @@ export interface SceneZone {
   label: string;
   /** 0..1 eased proximity intensity (drives glow opacity/core). */
   glow: number;
-  /** Raw center-to-center distance block→scene (for the connect check). */
+  /** Nearest-point-on-block-to-scene-center distance (for the connect check). */
   distance: number;
   /** This scene's connect perimeter radius (link threshold + visible box). */
   connectRadius: number;
 }
 
 // Nearest scene whose own detect perimeter contains the block, with
-// Voronoi-relative glow. Returns null when no scene is in range.
+// Voronoi-relative glow. Distance is measured from the block's full bounding
+// box (rectDistance), not just its center point, so a wide/tall block is
+// detected as soon as any part of it enters a perimeter. Returns null when no
+// scene is in range.
 export function activeSceneZone(
-  blockCenter: Pt,
+  blockRect: Rect,
   scenes: SceneRef[],
 ): SceneZone | null {
   let nearest: SceneRef | null = null;
   let di = Number.POSITIVE_INFINITY;
   for (const s of scenes) {
-    const d = distance(blockCenter, s.center);
+    const d = rectDistance(blockRect, s.center);
     if (d < di) {
       di = d;
       nearest = s;
@@ -93,7 +93,7 @@ export function activeSceneZone(
   let dMinOther = Number.POSITIVE_INFINITY;
   for (const s of scenes) {
     if (s.id === nearest.id) continue;
-    const d = distance(blockCenter, s.center);
+    const d = rectDistance(blockRect, s.center);
     if (d < dMinOther) dMinOther = d;
   }
 

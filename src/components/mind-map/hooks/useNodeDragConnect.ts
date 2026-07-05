@@ -16,7 +16,6 @@ import { EDGE_MARKER } from "@/components/mind-map/edges/edgeTypes";
 import {
   activeSceneZone,
   type Rect,
-  rectTouchesCircle,
   type SceneRef,
   type SceneZone,
   sceneRadius,
@@ -29,6 +28,20 @@ const VIDEO_BLOCK_COLOR = "#0f766e"; // videoDrop teal accent (VideoNode header 
 // SceneNode.tsx uses when spawning these node types: CARD_W/H and VIDEO_W/H).
 function fallbackSize(node: Node): { w: number; h: number } {
   return node.type === "videoDrop" ? { w: 280, h: 380 } : { w: 200, h: 96 };
+}
+
+// Full bounding box of a dragged node — proximity detection (activeSceneZone)
+// must use this, not just the node's center point, so a wide/tall node is
+// detected as soon as any part of it enters a perimeter.
+function nodeRectOf(node: Node): Rect {
+  const { w, h } = sizeOf(node);
+  const fb = fallbackSize(node);
+  return {
+    x: node.position.x,
+    y: node.position.y,
+    w: w || fb.w,
+    h: h || fb.h,
+  };
 }
 
 // Color the proximity glow to match the dragged block, per spec §2.
@@ -120,7 +133,7 @@ export function useNodeDragConnect({
         setProximity(null);
         return;
       }
-      const zone = activeSceneZone(centerOf(node), sceneRefs());
+      const zone = activeSceneZone(nodeRectOf(node), sceneRefs());
       setProximity(zone ? { zone, blockColor: blockColor(node) } : null);
     },
     [sceneRefs],
@@ -128,26 +141,18 @@ export function useNodeDragConnect({
 
   // The ONLY drag-based way to create an edge: a content/video block dropped
   // with any part of its bounding box (edge, corner, or interior) touching its
-  // nearest scene's connect radius links to that scene. Scene drags, and
-  // content/video dropped near no scene, create no edge — use the "+" toolbar
-  // or the connector tool (handle-drag) instead.
+  // nearest scene's connect radius links to that scene — same rect-aware
+  // distance used for detection above, so what triggers the glow is exactly
+  // what triggers the link. Scene drags, and content/video dropped near no
+  // scene, create no edge — use the "+" toolbar or the connector tool
+  // (handle-drag) instead.
   const onNodeDragStop: OnNodeDrag = useCallback(
     (_e, node) => {
       setProximity(null);
       if (node.type === "scene") return;
 
-      const zone = activeSceneZone(centerOf(node), sceneRefs());
-      if (!zone) return;
-
-      const { w, h } = sizeOf(node);
-      const fb = fallbackSize(node);
-      const rect: Rect = {
-        x: node.position.x,
-        y: node.position.y,
-        w: w || fb.w,
-        h: h || fb.h,
-      };
-      if (!rectTouchesCircle(rect, zone.center, zone.connectRadius)) return;
+      const zone = activeSceneZone(nodeRectOf(node), sceneRefs());
+      if (!zone || zone.distance > zone.connectRadius) return;
 
       const sceneNode = getNodes().find((n) => n.id === zone.sceneId);
       if (!sceneNode) return;
