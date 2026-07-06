@@ -21,3 +21,4 @@ custom_domain = true
 [[hyperdrive]]
 binding = "HYPERDRIVE"
 id = "e49aca572104454abab61e99576d0534"
+localConnectionString = "postgres://nextjs_user:Mpmf0m24mW2g8A@localhost:5432/postgres_local"
