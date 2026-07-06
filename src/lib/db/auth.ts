@@ -1,6 +1,6 @@
 import "server-only";
 import { auth } from "@clerk/nextjs/server";
-import { db } from "./index";
+import { getDb } from "./index";
 import { users } from "./schema/users";
 
 export async function requireUserId(): Promise<string> {
@@ -10,5 +10,5 @@ export async function requireUserId(): Promise<string> {
 }
 
 export async function ensureUser(userId: string): Promise<void> {
-  await db.insert(users).values({ id: userId }).onConflictDoNothing();
+  await getDb().insert(users).values({ id: userId }).onConflictDoNothing();
 }

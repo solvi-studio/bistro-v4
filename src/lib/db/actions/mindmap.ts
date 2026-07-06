@@ -4,7 +4,7 @@ import "server-only";
 import type { Edge, Node, Viewport } from "@xyflow/react";
 import { and, eq } from "drizzle-orm";
 import { requireUserId } from "@/lib/db/auth";
-import { db } from "@/lib/db/index";
+import { getDb } from "@/lib/db/index";
 import { folders } from "@/lib/db/schema/folders";
 
 export interface CanvasState {
@@ -17,7 +17,7 @@ export async function loadCanvas(
   clientId: string,
 ): Promise<CanvasState | null> {
   const userId = await requireUserId();
-  const [row] = await db
+  const [row] = await getDb()
     .select({ canvas: folders.canvas })
     .from(folders)
     .where(and(eq(folders.userId, userId), eq(folders.clientId, clientId)));
@@ -29,7 +29,7 @@ export async function saveCanvas(
   state: CanvasState,
 ): Promise<void> {
   const userId = await requireUserId();
-  await db
+  await getDb()
     .update(folders)
     .set({ canvas: state as unknown as Record<string, unknown> })
     .where(and(eq(folders.userId, userId), eq(folders.clientId, clientId)));

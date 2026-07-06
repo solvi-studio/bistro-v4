@@ -17,3 +17,7 @@ invocation_logs = true
 [route]
 pattern = "cf-workers.solvi.studio"
 custom_domain = true
+
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "e49aca572104454abab61e99576d0534"

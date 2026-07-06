@@ -3,7 +3,7 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { requireUserId } from "@/lib/db/auth";
-import { db } from "@/lib/db/index";
+import { getDb } from "@/lib/db/index";
 import { folders } from "@/lib/db/schema/folders";
 import { summaries } from "@/lib/db/schema/summaries";
 import type { SummariseResult } from "@/types/summarise";
@@ -13,7 +13,7 @@ async function resolveFolderId(
   userId: string,
   clientId: string,
 ): Promise<string | null> {
-  const [folder] = await db
+  const [folder] = await getDb()
     .select({ id: folders.id })
     .from(folders)
     .where(and(eq(folders.userId, userId), eq(folders.clientId, clientId)));
@@ -21,7 +21,7 @@ async function resolveFolderId(
 }
 
 async function getSummaryRow(folderId: string) {
-  const [row] = await db
+  const [row] = await getDb()
     .select()
     .from(summaries)
     .where(eq(summaries.folderId, folderId));
@@ -33,9 +33,9 @@ type SummaryData = Partial<typeof summaries.$inferInsert>;
 async function upsertSummary(folderId: string, data: SummaryData) {
   const existing = await getSummaryRow(folderId);
   if (existing) {
-    await db.update(summaries).set(data).where(eq(summaries.id, existing.id));
+    await getDb().update(summaries).set(data).where(eq(summaries.id, existing.id));
   } else {
-    await db.insert(summaries).values({ folderId, ...data });
+    await getDb().insert(summaries).values({ folderId, ...data });
   }
 }
 
@@ -109,5 +109,5 @@ export async function dbClearSummary(clientId: string): Promise<void> {
   const userId = await requireUserId();
   const folderId = await resolveFolderId(userId, clientId);
   if (!folderId) return;
-  await db.delete(summaries).where(eq(summaries.folderId, folderId));
+  await getDb().delete(summaries).where(eq(summaries.folderId, folderId));
 }

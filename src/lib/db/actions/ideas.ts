@@ -4,7 +4,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { ensureUser, requireUserId } from "@/lib/db/auth";
-import { db } from "@/lib/db/index";
+import { getDb } from "@/lib/db/index";
 import { folders } from "@/lib/db/schema/folders";
 import type { CreativeScript, Platform, ScriptColor } from "@/types/creative";
 import type { ScriptDraft } from "@/utils/creative";
@@ -27,6 +27,7 @@ function toScript(row: typeof folders.$inferSelect): CreativeScript {
 
 export async function listIdeas(): Promise<CreativeScript[]> {
   const userId = await requireUserId();
+  const db = getDb();
   const rows = await db
     .select()
     .from(folders)
@@ -40,6 +41,7 @@ export async function getIdeaByClientId(
 ): Promise<CreativeScript | null> {
   const userId = await requireUserId();
   if (clientId === "default") return getOrCreateDefault(userId);
+  const db = getDb();
   const [row] = await db
     .select()
     .from(folders)
@@ -48,6 +50,7 @@ export async function getIdeaByClientId(
 }
 
 async function getOrCreateDefault(userId: string): Promise<CreativeScript> {
+  const db = getDb();
   const [existing] = await db
     .select()
     .from(folders)
@@ -79,6 +82,7 @@ export async function createIdea(draft: ScriptDraft): Promise<CreativeScript> {
   const userId = await requireUserId();
   await ensureUser(userId);
 
+  const db = getDb();
   const name = draft.name.trim();
   const title = name.length > 0 ? name.slice(0, 48) : "Untitled project";
   const clientId = `s-${randomUUID()}`;
@@ -111,7 +115,7 @@ export async function renameIdea(
   name: string,
 ): Promise<void> {
   const userId = await requireUserId();
-  await db
+  await getDb()
     .update(folders)
     .set({ name: name.slice(0, 48) || "Untitled project" })
     .where(and(eq(folders.userId, userId), eq(folders.clientId, clientId)));
@@ -119,7 +123,7 @@ export async function renameIdea(
 
 export async function deleteIdea(clientId: string): Promise<void> {
   const userId = await requireUserId();
-  await db
+  await getDb()
     .delete(folders)
     .where(and(eq(folders.userId, userId), eq(folders.clientId, clientId)));
 }

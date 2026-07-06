@@ -1,7 +1,7 @@
 import { and, eq, lt, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { ensureUser, requireUserId } from "@/lib/db/auth";
-import { db } from "@/lib/db/index";
+import { getDb } from "@/lib/db/index";
 import { users } from "@/lib/db/schema/users";
 import { proxyJsonPost } from "../_lib/proxy";
 
@@ -37,8 +37,8 @@ export async function POST(request: Request) {
     // UPDATEs in one transaction: the row lock taken by the first UPDATE holds
     // for the whole transaction, so concurrent requests are serialized safely
     // without needing a separate lock or a single combined CASE expression.
+    const db = getDb();
     const reserved = await db.transaction(async (tx) => {
-      // Reset if the window has expired.
       await tx
         .update(users)
         .set({ videoAnalysisCount: 0, videoAnalysisWindowStart: null })
@@ -49,8 +49,6 @@ export async function POST(request: Request) {
           ),
         );
 
-      // Increment only if still under the limit; start the window if this is
-      // the first generation (window_start was NULL, possibly just cleared above).
       const [row] = await tx
         .update(users)
         .set({

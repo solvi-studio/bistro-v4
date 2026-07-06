@@ -4,7 +4,7 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { getPlanTasks, savePlanTasks } from "@/lib/db/actions/plan";
 import { requireUserId } from "@/lib/db/auth";
-import { db } from "@/lib/db/index";
+import { getDb } from "@/lib/db/index";
 import { folders } from "@/lib/db/schema/folders";
 import type { EnrichedCalendarEvent, PlanTask } from "@/types/plan";
 
@@ -14,7 +14,7 @@ export async function getCalendarTaskEvents(): Promise<
   EnrichedCalendarEvent[]
 > {
   const userId = await requireUserId();
-  const rows = await db
+  const rows = await getDb()
     .select({
       clientId: folders.clientId,
       name: folders.name,
