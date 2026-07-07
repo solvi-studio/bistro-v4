@@ -39,6 +39,7 @@ import CreativeHelperSidebar from "@/components/creative/CreativeHelperSidebar";
 import { EraserCursor } from "@/components/mind-map/canvas/EraserCursor";
 import MindMapSidePanel from "@/components/mind-map/canvas/MindMapSidePanel";
 import ResizableSplit from "@/components/mind-map/canvas/ResizableSplit";
+import SceneConnectionOverlay from "@/components/mind-map/canvas/SceneConnectionOverlay";
 import {
   INITIAL_EDGES,
   INITIAL_NODES,
@@ -230,9 +231,15 @@ function CanvasInner() {
       );
       if (existingEdge) return false;
 
+      // Content nodes cannot connect to other content nodes (video is unrestricted).
+      const ns = getNodes();
+      const src = ns.find((n) => n.id === connection.source);
+      const tgt = ns.find((n) => n.id === connection.target);
+      if (src?.type === "content" && tgt?.type === "content") return false;
+
       return true;
     },
-    [getEdges],
+    [getEdges, getNodes],
   );
 
   const onConnect: OnConnect = useCallback(
@@ -288,7 +295,9 @@ function CanvasInner() {
   );
 
   // ── Drag-to-link ──────────────────────────────────────────────────────────
-  const { onNodeDrag, onNodeDragStop } = useNodeDragConnect({ setEdges });
+  const { onNodeDrag, onNodeDragStop, proximity } = useNodeDragConnect({
+    setEdges,
+  });
 
   // ── Manual save ───────────────────────────────────────────────────────────
   const [savedFlash, setSavedFlash] = useState(false);
@@ -448,6 +457,7 @@ function CanvasInner() {
           size={1.5}
           color="#e5e7eb"
         />
+        <SceneConnectionOverlay proximity={proximity} />
         <Controls
           className="border! border-gray-200! shadow-sm! rounded-xl! overflow-hidden"
           showInteractive={false}
