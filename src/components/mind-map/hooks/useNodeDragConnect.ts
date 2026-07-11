@@ -22,14 +22,7 @@ import {
 } from "@/components/mind-map/utils/sceneProximity";
 import { centerOf, pickHandles, sizeOf } from "@/utils/mind-map-handles";
 
-export const VIDEO_BLOCK_COLOR = "#0f766e"; // videoDrop teal accent (VideoNode header color)
-
-// Glow color for a bare category string — used by both the RF-node-drag path
-// (via blockColor, once the node exists) and the sidebar HTML5-drag path
-// (which only has the category from the drag MIME type, no node yet).
-export function categoryGlowColor(cat: ContentCategory): string {
-  return CATEGORY_THEME[cat].headerText;
-}
+const VIDEO_BLOCK_COLOR = "#0f766e"; // videoDrop teal accent (VideoNode header color)
 
 // Fallback size when a node hasn't been measured yet (matches the defaults
 // SceneNode.tsx uses when spawning these node types: CARD_W/H and VIDEO_W/H).
@@ -55,7 +48,7 @@ function nodeRectOf(node: Node): Rect {
 function blockColor(node: Node): string {
   if (node.type === "content") {
     const cat = (node.data as { category?: ContentCategory }).category;
-    return cat ? categoryGlowColor(cat) : VIDEO_BLOCK_COLOR;
+    return cat ? CATEGORY_THEME[cat].headerText : VIDEO_BLOCK_COLOR;
   }
   return VIDEO_BLOCK_COLOR;
 }
@@ -63,7 +56,10 @@ function blockColor(node: Node): string {
 // ── Connection direction normalisation ────────────────────────────────────────
 // The target here always comes from the scene-proximity zone, so it's always a
 // scene; this puts the scene on the source side of the edge.
-function normalizeSceneEdge(a: Node, b: Node): { source: Node; target: Node } {
+function normalizeSceneEdge(
+  a: Node,
+  b: Node,
+): { source: Node; target: Node } {
   if (a.type === "scene" && b.type !== "scene") return { source: a, target: b };
   if (b.type === "scene" && a.type !== "scene") return { source: b, target: a };
   return { source: a, target: b };
@@ -106,12 +102,6 @@ export function useNodeDragConnect({
   onNodeDrag: OnNodeDrag;
   onNodeDragStop: OnNodeDrag;
   proximity: { zone: SceneZone; blockColor: string } | null;
-  // External (HTML5) drag support — for a sidebar chip that isn't yet an RF
-  // node while it's being dragged. Same proximity state + link logic as the
-  // RF-node-drag path above, driven from a cursor-derived rect instead.
-  onExternalDragOver: (blockRect: Rect, color: string) => void;
-  clearProximity: () => void;
-  connectExternalNode: (node: Node, dropRect: Rect) => void;
 } {
   const { getNodes, getEdges } = useReactFlow();
   const [proximity, setProximity] = useState<{
@@ -156,12 +146,12 @@ export function useNodeDragConnect({
   // what triggers the link. Scene drags, and content/video dropped near no
   // scene, create no edge — use the "+" toolbar or the connector tool
   // (handle-drag) instead.
-  //
-  // Shared by both onNodeDragStop (already-placed node re-dragged) and
-  // connectExternalNode (sidebar chip just spawned by a drop).
-  const linkBlockToNearestScene = useCallback(
-    (node: Node, rect?: Rect) => {
-      const zone = activeSceneZone(rect ?? nodeRectOf(node), sceneRefs());
+  const onNodeDragStop: OnNodeDrag = useCallback(
+    (_e, node) => {
+      setProximity(null);
+      if (node.type === "scene") return;
+
+      const zone = activeSceneZone(nodeRectOf(node), sceneRefs());
       if (!zone || zone.distance > zone.connectRadius) return;
 
       const sceneNode = getNodes().find((n) => n.id === zone.sceneId);
@@ -187,44 +177,5 @@ export function useNodeDragConnect({
     [getNodes, getEdges, setEdges, sceneRefs],
   );
 
-  const onNodeDragStop: OnNodeDrag = useCallback(
-    (_e, node) => {
-      setProximity(null);
-      if (node.type === "scene") return;
-      linkBlockToNearestScene(node);
-    },
-    [linkBlockToNearestScene],
-  );
-
-  // Sidebar HTML5 drag — called from onDragOver with a cursor-derived rect
-  // (no RF node exists yet), so the guide overlay appears while dragging in,
-  // not only after the chip is placed and re-dragged.
-  const onExternalDragOver = useCallback(
-    (blockRect: Rect, color: string) => {
-      const zone = activeSceneZone(blockRect, sceneRefs());
-      setProximity(zone ? { zone, blockColor: color } : null);
-    },
-    [sceneRefs],
-  );
-
-  const clearProximity = useCallback(() => setProximity(null), []);
-
-  // Called right after a sidebar-drag drop spawns its node. `dropRect` is the
-  // raw cursor-derived rect (same one onExternalDragOver used for the glow) —
-  // required, not the node's post-spawn position, because placeNode() may
-  // have nudged the node away from a scene it was overlapping, which would
-  // otherwise push it outside the connect radius the glow just promised.
-  const connectExternalNode = useCallback(
-    (node: Node, dropRect: Rect) => linkBlockToNearestScene(node, dropRect),
-    [linkBlockToNearestScene],
-  );
-
-  return {
-    onNodeDrag,
-    onNodeDragStop,
-    proximity,
-    onExternalDragOver,
-    clearProximity,
-    connectExternalNode,
-  };
+  return { onNodeDrag, onNodeDragStop, proximity };
 }

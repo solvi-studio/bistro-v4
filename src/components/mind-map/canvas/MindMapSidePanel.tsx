@@ -7,7 +7,6 @@ import {
   type MindMapGroup,
 } from "@/components/mind-map/constants/topics";
 import {
-  CAT_DND_PREFIX,
   spawnContentNode,
   TOPIC_DND_MIME,
   type TopicDragPayload,
@@ -33,9 +32,6 @@ export default function MindMapSidePanel() {
       header: label,
     };
     e.dataTransfer.setData(TOPIC_DND_MIME, JSON.stringify(payload));
-    // Category-as-MIME-type: readable from `dataTransfer.types` during
-    // `dragover`, when `getData()` itself is locked out by the browser.
-    e.dataTransfer.setData(`${CAT_DND_PREFIX}${group.category}`, "");
     e.dataTransfer.effectAllowed = "copy";
   }
 

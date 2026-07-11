@@ -5,11 +5,6 @@ import { placeNode, rectOf } from "@/utils/mind-map-layout";
 
 export const TOPIC_DND_MIME = "application/x-mindmap-topic";
 export const VIDEO_DND_MIME = "application/x-mindmap-video";
-// `getData()` is unreadable during `dragover` (browser security only allows
-// reading `dataTransfer.types`), so the category is carried as a MIME type
-// suffix instead of JSON — lets the canvas tint the connection-guide glow to
-// the dragged chip's category while it's still mid-drag, not just after drop.
-export const CAT_DND_PREFIX = "application/x-mindmap-cat-";
 
 export interface TopicDragPayload {
   category: ContentCategory;
@@ -34,18 +29,14 @@ interface FlowOps {
 // there; if that spot overlaps an existing node it nudges to the nearest
 // free slot. If no position is given (sidebar click), it finds a free slot
 // near the default anchor.
-//
-// Returns the created node (or null if the header was blank) so a caller
-// that just spawned it can immediately act on it — e.g. link it to a nearby
-// scene right after a drag-drop.
 export function spawnContentNode(
   rf: FlowOps,
   category: ContentCategory,
   header: string,
   position?: { x: number; y: number },
-): Node | null {
+): void {
   const trimmed = header.trim();
-  if (!trimmed) return null;
+  if (!trimmed) return;
 
   const occupied = rf.getNodes().map(rectOf);
   const anchor = position ?? DEFAULT_ANCHOR;
@@ -69,12 +60,10 @@ export function spawnContentNode(
           width: SPAWN_W,
         };
 
-  const node: Node = {
+  rf.addNodes({
     id: `content-${category}-${Date.now()}`,
     type: "content",
     position: pos,
     data,
-  };
-  rf.addNodes(node);
-  return node;
+  });
 }

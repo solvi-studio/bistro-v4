@@ -13,14 +13,16 @@ import {
   useInternalNode,
   useReactFlow,
 } from "@xyflow/react";
-import { Trash2 } from "lucide-react";
-import { type HandleSide, pickHandles } from "@/utils/mind-map-handles";
+import { pickHandles, type HandleSide } from "@/utils/mind-map-handles";
+import { Trash2, Type } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type EdgeStyleType = "smoothstep" | "straight" | "bezier";
 
 export type LabeledEdgeData = {
+  label?: string;
   edgeType?: EdgeStyleType;
   arrowStart?: boolean;
   arrowEnd?: boolean;
@@ -45,18 +47,10 @@ function sideToCoords(
   side: HandleSide,
 ): { x: number; y: number; position: Position } {
   switch (side) {
-    case "top":
-      return { x: absPos.x + w / 2, y: absPos.y, position: Position.Top };
-    case "bottom":
-      return {
-        x: absPos.x + w / 2,
-        y: absPos.y + h,
-        position: Position.Bottom,
-      };
-    case "left":
-      return { x: absPos.x, y: absPos.y + h / 2, position: Position.Left };
-    case "right":
-      return { x: absPos.x + w, y: absPos.y + h / 2, position: Position.Right };
+    case "top":    return { x: absPos.x + w / 2, y: absPos.y,         position: Position.Top };
+    case "bottom": return { x: absPos.x + w / 2, y: absPos.y + h,     position: Position.Bottom };
+    case "left":   return { x: absPos.x,          y: absPos.y + h / 2, position: Position.Left };
+    case "right":  return { x: absPos.x + w,      y: absPos.y + h / 2, position: Position.Right };
   }
 }
 
@@ -128,20 +122,19 @@ export default function LabeledEdge({
   data,
 }: EdgeProps<LabeledEdgeType>) {
   const { updateEdgeData, deleteElements } = useReactFlow();
+  const [isEditing, setIsEditing] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const edgeType: EdgeStyleType = data?.edgeType ?? "smoothstep";
+  const label = data?.label ?? "";
 
   // Re-pick handles dynamically from current node positions so the edge always
   // exits/enters the closest side regardless of which handle was stored at creation.
   const srcNode = useInternalNode(source);
   const tgtNode = useInternalNode(target);
 
-  let sX = sourceX,
-    sY = sourceY,
-    sPos = sourcePosition;
-  let tX = targetX,
-    tY = targetY,
-    tPos = targetPosition;
+  let sX = sourceX, sY = sourceY, sPos = sourcePosition;
+  let tX = targetX, tY = targetY, tPos = targetPosition;
 
   if (srcNode && tgtNode) {
     const srcAbs = srcNode.internals.positionAbsolute;
@@ -156,12 +149,8 @@ export default function LabeledEdge({
 
     const s = sideToCoords(srcAbs, srcW, srcH, sourceHandle);
     const t = sideToCoords(tgtAbs, tgtW, tgtH, targetHandle);
-    sX = s.x;
-    sY = s.y;
-    sPos = s.position;
-    tX = t.x;
-    tY = t.y;
-    tPos = t.position;
+    sX = s.x; sY = s.y; sPos = s.position;
+    tX = t.x; tY = t.y; tPos = t.position;
   }
 
   const [edgePath, labelX, labelY] = getEdgePath(edgeType, {
@@ -172,6 +161,19 @@ export default function LabeledEdge({
     targetY: tY,
     targetPosition: tPos,
   });
+
+  const startEditing = useCallback(() => {
+    setIsEditing(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, []);
+
+  const commitLabel = useCallback(
+    (val: string) => {
+      setIsEditing(false);
+      updateEdgeData(id, { label: val.trim() });
+    },
+    [id, updateEdgeData],
+  );
 
   return (
     <>
@@ -219,6 +221,18 @@ export default function LabeledEdge({
 
               <div className="w-px h-4 bg-gray-200 mx-0.5 shrink-0" />
 
+              {/* Label edit */}
+              <button
+                type="button"
+                title="Edit label"
+                onClick={startEditing}
+                className="h-6 w-6 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition-colors"
+              >
+                <Type size={12} />
+              </button>
+
+              <div className="w-px h-4 bg-gray-200 mx-0.5 shrink-0" />
+
               {/* Delete */}
               <button
                 type="button"
@@ -230,6 +244,40 @@ export default function LabeledEdge({
               </button>
             </div>
           )}
+
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              defaultValue={label}
+              placeholder="Label…"
+              onBlur={(e) => commitLabel(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitLabel(e.currentTarget.value);
+                if (e.key === "Escape") setIsEditing(false);
+                e.stopPropagation();
+              }}
+              className="text-gray-600 text-xs bg-white border border-gray-300 rounded-lg px-2 py-0.5 shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 min-w-15"
+            />
+          ) : label ? (
+            // biome-ignore lint/a11y/noStaticElementInteractions: edge label double-click to edit
+            <span
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                startEditing();
+              }}
+              className="text-xs bg-white border border-gray-200 rounded-lg px-2 py-0.5 shadow-sm text-gray-600 hover:border-gray-300 cursor-pointer"
+            >
+              {label}
+            </span>
+          ) : selected ? (
+            <button
+              type="button"
+              onClick={startEditing}
+              className="text-xs text-gray-400 bg-white/80 border border-dashed border-gray-300 rounded-lg px-2 py-0.5 hover:text-gray-600 hover:border-gray-400 transition-colors"
+            >
+              + label
+            </button>
+          ) : null}
         </div>
       </EdgeLabelRenderer>
     </>
