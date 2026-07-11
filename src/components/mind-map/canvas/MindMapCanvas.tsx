@@ -21,7 +21,13 @@ import {
 import { Save, Sparkles } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ContentCategory } from "@/components/mind-map/constants/topics";
 import {
+  categoryGlowColor,
+  VIDEO_BLOCK_COLOR,
+} from "@/components/mind-map/hooks/useNodeDragConnect";
+import {
+  CAT_DND_PREFIX,
   spawnContentNode,
   TOPIC_DND_MIME,
   type TopicDragPayload,
@@ -142,7 +148,6 @@ function CanvasInner() {
   const restored = useRef(false);
   useEffect(() => {
     restored.current = false;
-    if (userId) recordFolderOpened(userId, mapId);
     loadCanvas(mapId)
       .then((saved) => {
         if (saved) {
@@ -156,7 +161,19 @@ function CanvasInner() {
       .finally(() => {
         restored.current = true;
       });
-  }, [mapId, userId, setNodes, setEdges, setViewport]);
+  }, [mapId, setNodes, setEdges, setViewport]);
+
+  // Folder-opened analytics ping — needs userId once Clerk resolves it, but
+  // must NOT re-trigger the full canvas restore above. loadCanvas
+  // authenticates server-side via its own session and never reads this
+  // client userId, so folding it into that effect's deps only meant the
+  // whole canvas got re-fetched a second time on every load (once at
+  // userId=undefined, once when Clerk resolves) — silently clobbering any
+  // in-session correction made between the two, e.g. VideoNode's
+  // reload-status reset, with a stale DB read.
+  useEffect(() => {
+    if (userId) recordFolderOpened(userId, mapId);
+  }, [userId, mapId]);
 
   // Debounced autosave (fire-and-forget — DB write)
   useEffect(() => {
@@ -170,20 +187,31 @@ function CanvasInner() {
   }, [mapId, nodes, edges, getViewport]);
 
   // ── Scene renumber — keep Scene N labels sequential after add/delete ────────
+  // Functional setNodes: this effect can fire in the same commit as a child
+  // node's own mount effect (e.g. VideoNode's reload-status reset). A plain
+  // `setNodes(updated)` built from the stale `nodes` closure would overwrite
+  // that concurrent update; merging onto `prev` instead always keeps it.
+  // `nodes` must stay in deps so this re-runs after node add/delete — the
+  // functional updater deliberately reads `prev`, not `nodes`, to avoid the
+  // stale-closure race described above, but the effect still needs to be
+  // triggered by node changes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
   useEffect(() => {
     if (!restored.current) return;
-    const ordered = buildSceneChainOrder(nodes, edges);
-    let needsUpdate = false;
-    const updated = nodes.map((n) => {
-      if (n.type !== "scene") return n;
-      const idx = ordered.indexOf(n.id);
-      const expected =
-        idx >= 0 ? `Scene ${idx + 1}` : (n.data as { label?: string }).label;
-      if ((n.data as { label?: string }).label === expected) return n;
-      needsUpdate = true;
-      return { ...n, data: { ...n.data, label: expected } };
+    setNodes((prev) => {
+      const ordered = buildSceneChainOrder(prev, edges);
+      let needsUpdate = false;
+      const updated = prev.map((n) => {
+        if (n.type !== "scene") return n;
+        const idx = ordered.indexOf(n.id);
+        const expected =
+          idx >= 0 ? `Scene ${idx + 1}` : (n.data as { label?: string }).label;
+        if ((n.data as { label?: string }).label === expected) return n;
+        needsUpdate = true;
+        return { ...n, data: { ...n.data, label: expected } };
+      });
+      return needsUpdate ? updated : prev;
     });
-    if (needsUpdate) setNodes(updated);
   }, [nodes, edges, setNodes]);
 
   const isSelectTool = activeTool === "select";
@@ -295,7 +323,14 @@ function CanvasInner() {
   );
 
   // ── Drag-to-link ──────────────────────────────────────────────────────────
-  const { onNodeDrag, onNodeDragStop, proximity } = useNodeDragConnect({
+  const {
+    onNodeDrag,
+    onNodeDragStop,
+    proximity,
+    onExternalDragOver,
+    clearProximity,
+    connectExternalNode,
+  } = useNodeDragConnect({
     setEdges,
   });
 
@@ -325,15 +360,45 @@ function CanvasInner() {
   }, [nodes, edges, router, mapId]);
 
   // ── Drag-and-drop — sidebar chip or video card ────────────────────────────
-  const onDragOver = useCallback((e: React.DragEvent) => {
-    if (
-      e.dataTransfer.types.includes(TOPIC_DND_MIME) ||
-      e.dataTransfer.types.includes(VIDEO_DND_MIME)
-    ) {
+  // Category rides in the drag MIME type (application/x-mindmap-cat-<cat>),
+  // not the JSON payload — `getData()` is unreadable during `dragover`, only
+  // `dataTransfer.types` is, so this is the only way to know the block's
+  // color before it's actually dropped.
+  const dragCategory = useCallback(
+    (types: readonly string[]): ContentCategory | null => {
+      const t = types.find((t) => t.startsWith(CAT_DND_PREFIX));
+      return t ? (t.slice(CAT_DND_PREFIX.length) as ContentCategory) : null;
+    },
+    [],
+  );
+
+  const onDragOver = useCallback(
+    (e: React.DragEvent) => {
+      const isVideo = e.dataTransfer.types.includes(VIDEO_DND_MIME);
+      const isTopic = e.dataTransfer.types.includes(TOPIC_DND_MIME);
+      if (!isVideo && !isTopic) return;
+
       e.preventDefault();
       e.dataTransfer.dropEffect = "copy";
-    }
-  }, []);
+
+      const p = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+      if (isVideo) {
+        onExternalDragOver(
+          { x: p.x, y: p.y, w: 280, h: 380 },
+          VIDEO_BLOCK_COLOR,
+        );
+        return;
+      }
+      const cat = dragCategory(e.dataTransfer.types);
+      onExternalDragOver(
+        { x: p.x, y: p.y, w: 200, h: 96 },
+        cat ? categoryGlowColor(cat) : VIDEO_BLOCK_COLOR,
+      );
+    },
+    [screenToFlowPosition, onExternalDragOver, dragCategory],
+  );
+
+  const onDragLeave = useCallback(() => clearProximity(), [clearProximity]);
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
@@ -344,32 +409,58 @@ function CanvasInner() {
       if (e.dataTransfer.types.includes(VIDEO_DND_MIME)) {
         const occupied = getNodes().map(rectOf);
         const pos = placeNode(occupied, position.x, position.y, 1, 280, 380);
-        addNodes({
+        const node = {
           id: `videoDrop-${Date.now()}`,
           type: "videoDrop",
           position: pos,
           data: { status: "idle" },
+        };
+        addNodes(node);
+        connectExternalNode(node, {
+          x: position.x,
+          y: position.y,
+          w: 280,
+          h: 380,
         });
+        clearProximity();
         return;
       }
 
       // Content chip drop — spawnContentNode handles collision + nudge.
       const raw = e.dataTransfer.getData(TOPIC_DND_MIME);
-      if (!raw) return;
+      if (!raw) {
+        clearProximity();
+        return;
+      }
       let payload: TopicDragPayload;
       try {
         payload = JSON.parse(raw) as TopicDragPayload;
       } catch {
+        clearProximity();
         return;
       }
-      spawnContentNode(
+      const node = spawnContentNode(
         { addNodes, getNodes },
         payload.category,
         payload.header,
         position,
       );
+      if (node)
+        connectExternalNode(node, {
+          x: position.x,
+          y: position.y,
+          w: 200,
+          h: 96,
+        });
+      clearProximity();
     },
-    [screenToFlowPosition, addNodes, getNodes],
+    [
+      screenToFlowPosition,
+      addNodes,
+      getNodes,
+      connectExternalNode,
+      clearProximity,
+    ],
   );
 
   // ── Pane click — place video node ─────────────────────────────────────────
@@ -434,6 +525,7 @@ function CanvasInner() {
         onPaneClick={onPaneClick}
         onDrop={onDrop}
         onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
         onNodeClick={eraserHandlers.onNodeClick}
         onNodeMouseEnter={eraserHandlers.onNodeMouseEnter}
         nodeTypes={nodeTypes}

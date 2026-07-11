@@ -47,7 +47,7 @@ src/components/mind-map/
     VideoDropNode.tsx              — video analysis node: TikTok URL + prompt → analyzeVideoMindmap (utils/video-mindmap-service), spawns results into the 4 hubs
     nodeTypes.ts                   — nodeTypes map passed to <ReactFlow>
   edges/
-    LabeledEdge.tsx                — custom edge: smoothstep/straight/bezier, inline label edit, floating toolbar
+    LabeledEdge.tsx                — custom edge: smoothstep/straight/bezier, floating toolbar (no label editing)
     edgeTypes.ts                   — edgeTypes map passed to <ReactFlow>
   toolbar/
     NodeToolbar.tsx                — unified contextual toolbar for all node types (discriminated union on nodeType prop)
@@ -95,13 +95,11 @@ Two shared sub-controls live inside `NodeToolbar.tsx` and are reused across node
 
 ### LabeledEdge (custom edge type)
 
-All edges use `type: "labeled"` which maps to `LabeledEdge`. Edge data shape: `{ label?: string; edgeType?: "smoothstep" | "straight" | "bezier" }`. The path type (smoothstep/straight/bezier) is stored in `data.edgeType` — the edge `type` is always `"labeled"`.
+All edges use `type: "labeled"` which maps to `LabeledEdge`. Edge data shape: `{ edgeType?: "smoothstep" | "straight" | "bezier" }`. The path type (smoothstep/straight/bezier) is stored in `data.edgeType` — the edge `type` is always `"labeled"`. Edges have no user-editable text label (removed).
 
-**Rendering:** calls the appropriate `getSmoothStepPath` / `getStraightPath` / `getBezierPath` helper, then renders `<BaseEdge>` + an `<EdgeLabelRenderer>` overlay positioned at `(labelX, labelY)` returned by the path helper.
+**Rendering:** calls the appropriate `getSmoothStepPath` / `getStraightPath` / `getBezierPath` helper, then renders `<BaseEdge>` + an `<EdgeLabelRenderer>` overlay (hosts only the floating toolbar now) positioned at `(labelX, labelY)` returned by the path helper.
 
-**Floating toolbar:** when edge is selected, a toolbar appears above the midpoint via `EdgeLabelRenderer`. Buttons: Smooth / Line / Curve (path type switcher) · Type icon (open label edit) · Delete. Clicking a path type button calls `updateEdgeData(id, { edgeType })`.
-
-**Label edit:** clicking the Type icon (or double-clicking an existing label) shows an `<input>` at the edge midpoint. Blur / Enter commits; Escape cancels. When selected but no label, a dashed `+ label` button appears.
+**Floating toolbar:** when edge is selected, a toolbar appears above the midpoint via `EdgeLabelRenderer`. Buttons: Smooth / Line / Curve (path type switcher) · Delete. Clicking a path type button calls `updateEdgeData(id, { edgeType })`.
 
 **Connection guards:** `isValidConnection` in `MindMapCanvas` rejects self-loops (source === target) and duplicate edges (same source+target pair already exists).
 

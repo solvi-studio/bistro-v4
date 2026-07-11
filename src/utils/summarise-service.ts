@@ -18,7 +18,7 @@ interface SceneApiResponse {
   scene: string;
   time: string;
   description: string;
-  visual: string;
+  shooting_style: string;
   audio: string;
   script: string;
 }
@@ -87,7 +87,7 @@ function sceneToRow(scene: SceneApiResponse, i: number): ShotData {
     shotNumber: i + 1,
     time: scene.time || undefined,
     description: scene.description,
-    shootingStyle: scene.visual || "—",
+    shootingStyle: scene.shooting_style || "—",
     audio: scene.audio || "—",
     script: lines.length > 0 ? lines : [scene.script],
   };
@@ -113,7 +113,7 @@ async function attemptSummary(graph: MindMapGraph): Promise<SummariseResult> {
     const res = await fetch(SUMMARY_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ graph: JSON.stringify(graph) }),
+      body: JSON.stringify({ graph }),
       signal: controller.signal,
     });
     if (!res.ok) {
