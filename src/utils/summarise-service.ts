@@ -113,9 +113,8 @@ async function attemptSummary(graph: MindMapGraph): Promise<SummariseResult> {
     const res = await fetch(SUMMARY_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // This line is the correct change we need in main
       body: JSON.stringify({ graph: JSON.stringify(graph) }),
-      //okay boi?
+      //remove check comment
       signal: controller.signal,
     });
     if (!res.ok) {
