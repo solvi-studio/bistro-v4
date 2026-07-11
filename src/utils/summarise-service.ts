@@ -113,7 +113,7 @@ async function attemptSummary(graph: MindMapGraph): Promise<SummariseResult> {
     const res = await fetch(SUMMARY_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ graph }),
+      body: JSON.stringify({ graph: JSON.stringify(graph) }),
       signal: controller.signal,
     });
     if (!res.ok) {
