@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Serif_Display, Geist, Geist_Mono, Poppins } from "next/font/google";
 import "./globals.css";
-import { ClerkProvider } from '@clerk/nextjs'
+import { ClerkProvider } from "@clerk/nextjs";
 import { getClerkProxyConfig } from "@/lib/clerk-config";
 
 const geistSans = Geist({
@@ -66,9 +66,7 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} ${dmSerifDisplay.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ClerkProvider {...clerkConfig}>
-          {children}
-        </ClerkProvider>
+        <ClerkProvider {...clerkConfig}>{children}</ClerkProvider>
       </body>
     </html>
   );
