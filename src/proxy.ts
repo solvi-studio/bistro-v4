@@ -13,6 +13,7 @@ function getSecret() {
 
 const isPublicRoute = createRouteMatcher([
   '/',
+  '/welcome',
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/unlock',

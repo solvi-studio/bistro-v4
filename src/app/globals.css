@@ -84,3 +84,12 @@ body {
     transform: translate(-50%, -0.6vmin);
   }
 }
+
+@layer base {
+  .cursor-none-scope,
+  .cursor-none-scope *,
+  .cursor-none-scope *::before,
+  .cursor-none-scope *::after {
+    cursor: none !important;
+  }
+}
